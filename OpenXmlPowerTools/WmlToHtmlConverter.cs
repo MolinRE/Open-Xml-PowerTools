@@ -144,13 +144,15 @@ namespace OpenXmlPowerTools
     {
         public static XElement ConvertToHtml(WmlDocument wmlDoc, HtmlConverterSettings htmlConverterSettings)
         {
-            WmlToHtmlConverterSettings settings = new WmlToHtmlConverterSettings(htmlConverterSettings);
+            var settings = new WmlToHtmlConverterSettings(htmlConverterSettings);
+
             return WmlToHtmlConverter.ConvertToHtml(wmlDoc, settings);
         }
 
         public static XElement ConvertToHtml(WordprocessingDocument wDoc, HtmlConverterSettings htmlConverterSettings)
         {
-            WmlToHtmlConverterSettings settings = new WmlToHtmlConverterSettings(htmlConverterSettings);
+            var settings = new WmlToHtmlConverterSettings(htmlConverterSettings);
+
             return WmlToHtmlConverter.ConvertToHtml(wDoc, settings);
         }
     }
@@ -185,7 +187,7 @@ namespace OpenXmlPowerTools
         public static XElement ConvertToHtml(WordprocessingDocument wordDoc, WmlToHtmlConverterSettings htmlConverterSettings)
         {
             RevisionAccepter.AcceptRevisions(wordDoc);
-            SimplifyMarkupSettings simplifyMarkupSettings = new SimplifyMarkupSettings
+            var simplifyMarkupSettings = new SimplifyMarkupSettings
             {
                 RemoveComments = true,
                 RemoveContentControls = true,
@@ -202,7 +204,7 @@ namespace OpenXmlPowerTools
             };
             MarkupSimplifier.SimplifyMarkup(wordDoc, simplifyMarkupSettings);
 
-            FormattingAssemblerSettings formattingAssemblerSettings = new FormattingAssemblerSettings
+            var formattingAssemblerSettings = new FormattingAssemblerSettings
             {
                 RemoveStyleNamesFromParagraphAndRunProperties = false,
                 ClearStyles = false,
@@ -232,8 +234,7 @@ namespace OpenXmlPowerTools
             FieldRetriever.AnnotateWithFieldInfo(wordDoc.MainDocumentPart);
             AnnotateForSections(wordDoc);
 
-            XElement xhtml = (XElement)ConvertToHtmlTransform(wordDoc, htmlConverterSettings,
-                rootElement, false, 0m);
+            var xhtml = (XElement)ConvertToHtmlTransform(wordDoc, htmlConverterSettings, rootElement, false, 0m);
 
             ReifyStylesAndClasses(htmlConverterSettings, xhtml);
 
@@ -448,15 +449,46 @@ namespace OpenXmlPowerTools
             // Transform hyperlinks to the XHTML h:a element.
             if (element.Name == W.hyperlink && element.Attribute(R.id) != null)
             {
+                //try
+                //{
+                //    string anchor = "";
+                //    var anchorElement = element.Attribute(W.anchor);
+                //    if (anchorElement != null)
+                //    {
+                //        anchor = '#' + anchorElement.Value;
+                //    }
+
+                //    var a = new XElement(Xhtml.a,
+                //        new XAttribute("href",
+                //            wordDoc.MainDocumentPart
+                //                .HyperlinkRelationships
+                //                .First(x => x.Id == (string)element.Attribute(R.id))
+                //                .Uri + anchor
+                //            ),
+                //        element.Elements(W.r).Select(run => ConvertRun(wordDoc, settings, run))
+                //        );
+                //    if (!a.Nodes().Any())
+                //        a.Add(new XText(""));
+                //    return a;
+                //}
+                //catch (UriFormatException)
+                //{
+                //    return element.Elements().Select(e => ConvertToHtmlTransform(wordDoc, settings, e, false, currentMarginLeft));
+                //}
+
                 try
                 {
-                    var a = new XElement(Xhtml.a,
-                        new XAttribute("href",
-                            wordDoc.MainDocumentPart
+                    var url = wordDoc.MainDocumentPart
                                 .HyperlinkRelationships
                                 .First(x => x.Id == (string)element.Attribute(R.id))
-                                .Uri
-                            ),
+                                .Uri.ToString();
+                    if (element.Attribute(W.anchor) != null)
+                    {
+                        url += "#" + element.Attribute(W.anchor).Value;
+                    }
+
+                    var a = new XElement(Xhtml.a,
+                        new XAttribute("href", url),
                         element.Elements(W.r).Select(run => ConvertRun(wordDoc, settings, run))
                         );
                     if (!a.Nodes().Any())
