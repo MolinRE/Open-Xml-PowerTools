@@ -45,6 +45,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Xml.Linq;
@@ -166,6 +167,7 @@ namespace OpenXmlPowerTools
         public string ContentType;
         public XElement DrawingElement;
         public string AltText;
+        public string Url;
 
         public const int EmusPerInch = 914400;
         public const int EmusPerCm = 360000;
@@ -3065,7 +3067,7 @@ namespace OpenXmlPowerTools
         // It actually works, but is not recommended.
         private static readonly List<string> ImageContentTypes = new List<string>
         {
-            "image/png", "image/gif", "image/tiff", "image/jpeg"
+            "image/png", "image/gif", "image/tiff", "image/jpeg", "image/x-wmf"
         };
 
 
@@ -3124,46 +3126,37 @@ namespace OpenXmlPowerTools
                 .Elements(A.graphicData)
                 .Elements(Pic._pic).Elements(Pic.blipFill).FirstOrDefault();
             if (blipFill == null) return null;
-
-            var imageRid = (string)blipFill.Elements(A.blip).Attributes(R.embed).FirstOrDefault();
-            if (imageRid == null) return null;
-
-            var pp3 = wordDoc.MainDocumentPart.Parts.FirstOrDefault(pp => pp.RelationshipId == imageRid);
-            if (pp3 == null) return null;
-
-            var imagePart = (ImagePart)pp3.OpenXmlPart;
-            if (imagePart == null) return null;
-
-            // If the image markup points to a NULL image, then following will throw an ArgumentOutOfRangeException
-            try
+            
+            var rLink = blipFill.Elements(A.blip).Attributes(R.link).FirstOrDefault();
+            if (rLink != null)
             {
-                imagePart = (ImagePart)wordDoc.MainDocumentPart.GetPartById(imageRid);
-            }
-            catch (ArgumentOutOfRangeException)
-            {
-                return null;
-            }
+                var descr = (string)containerElement
+                    .Elements(A.graphic)
+                    .Elements(A.graphicData)
+                    .Elements(Pic._pic)
+                    .Elements(Pic.nvPicPr)
+                    .Elements(Pic.cNvPr)
+                    .Attributes("descr")
+                    .FirstOrDefault();
+                if (descr == null)
+                {
+                    return null;
+                }
 
-            var contentType = imagePart.ContentType;
-            if (!ImageContentTypes.Contains(contentType))
-                return null;
-
-            using (var partStream = imagePart.GetStream())
-            using (var bitmap = new Bitmap(partStream))
-            {
                 if (extentCx != null && extentCy != null)
                 {
                     var imageInfo = new ImageInfo()
                     {
-                        Bitmap = bitmap,
+                        Bitmap = null,
                         ImgStyleAttribute = new XAttribute("style",
                             string.Format(NumberFormatInfo.InvariantInfo,
                                 "width: {0}in; height: {1}in",
                                 (float)extentCx / (float)ImageInfo.EmusPerInch,
                                 (float)extentCy / (float)ImageInfo.EmusPerInch)),
-                        ContentType = contentType,
+                        ContentType = null,
                         DrawingElement = element,
                         AltText = altText,
+                        Url = descr
                     };
                     var imgElement2 = imageHandler(imageInfo);
                     if (hyperlinkUri != null)
@@ -3177,10 +3170,11 @@ namespace OpenXmlPowerTools
 
                 var imageInfo2 = new ImageInfo()
                 {
-                    Bitmap = bitmap,
-                    ContentType = contentType,
+                    Bitmap = null,
+                    ContentType = null,
                     DrawingElement = element,
                     AltText = altText,
+                    Url = descr
                 };
                 var imgElement = imageHandler(imageInfo2);
                 if (hyperlinkUri != null)
@@ -3191,6 +3185,81 @@ namespace OpenXmlPowerTools
                 }
                 return imgElement;
             }
+            else
+            {
+                var rEmbed = blipFill.Elements(A.blip).Attributes(R.embed).FirstOrDefault();
+                if (rEmbed != null)
+                {
+                    var imageRid = (string)rEmbed;
+                    if (imageRid == null) return null;
+
+                    var pp3 = wordDoc.MainDocumentPart.Parts.FirstOrDefault(pp => pp.RelationshipId == imageRid);
+                    if (pp3 == null) return null;
+
+                    var imagePart = (ImagePart)pp3.OpenXmlPart;
+                    if (imagePart == null) return null;
+
+                    // If the image markup points to a NULL image, then following will throw an ArgumentOutOfRangeException
+                    try
+                    {
+                        imagePart = (ImagePart)wordDoc.MainDocumentPart.GetPartById(imageRid);
+                    }
+                    catch (ArgumentOutOfRangeException)
+                    {
+                        return null;
+                    }
+
+                    var contentType = imagePart.ContentType;
+                    if (!ImageContentTypes.Contains(contentType))
+                        return null;
+
+                    using (var partStream = imagePart.GetStream())
+                    using (var bitmap = new Bitmap(partStream))
+                    {
+                        if (extentCx != null && extentCy != null)
+                        {
+                            var imageInfo = new ImageInfo()
+                            {
+                                Bitmap = bitmap,
+                                ImgStyleAttribute = new XAttribute("style",
+                                    string.Format(NumberFormatInfo.InvariantInfo,
+                                        "width: {0}in; height: {1}in",
+                                        (float)extentCx / (float)ImageInfo.EmusPerInch,
+                                        (float)extentCy / (float)ImageInfo.EmusPerInch)),
+                                ContentType = contentType,
+                                DrawingElement = element,
+                                AltText = altText,
+                            };
+                            var imgElement2 = imageHandler(imageInfo);
+                            if (hyperlinkUri != null)
+                            {
+                                return new XElement(XhtmlNoNamespace.a,
+                                    new XAttribute(XhtmlNoNamespace.href, hyperlinkUri),
+                                    imgElement2);
+                            }
+                            return imgElement2;
+                        }
+
+                        var imageInfo2 = new ImageInfo()
+                        {
+                            Bitmap = bitmap,
+                            ContentType = contentType,
+                            DrawingElement = element,
+                            AltText = altText,
+                        };
+                        var imgElement = imageHandler(imageInfo2);
+                        if (hyperlinkUri != null)
+                        {
+                            return new XElement(XhtmlNoNamespace.a,
+                                new XAttribute(XhtmlNoNamespace.href, hyperlinkUri),
+                                imgElement);
+                        }
+                        return imgElement;
+                    }
+                }
+            }
+
+            return null;
         }
 
         private static XElement ProcessPictureOrObject(WordprocessingDocument wordDoc,

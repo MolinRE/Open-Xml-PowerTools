@@ -33,7 +33,7 @@ class ListItemRetriever01
         tempDi.Create();
 
         using (WordprocessingDocument wDoc =
-            WordprocessingDocument.Open("../../NumberedListTest.docx", false))
+            WordprocessingDocument.Open("../../../NumberedListTest.docx", false))
         {
             int abstractNumId = 0;
             XElement xml = ConvertDocToXml(wDoc, abstractNumId);

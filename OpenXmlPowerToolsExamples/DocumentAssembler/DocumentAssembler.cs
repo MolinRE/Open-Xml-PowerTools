@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Xml.Linq;
 
 namespace OpenXmlPowerTools
@@ -8,27 +9,29 @@ namespace OpenXmlPowerTools
     {
         static void Main(string[] args)
         {
+            DirectoryInfo di = new DirectoryInfo(@"C:\Users\k.komarov\source\ad\Open-Xml-PowerTools\Open-Xml-PowerTools\OpenXmlPowerToolsExamples\DocumentAssembler");
+            args = "TemplateDocument.docx Data.xml AssembledDoc.docx".Split(' ');
             if (args.Length != 3)
             {
                 PrintUsage();
                 Environment.Exit(0);
             }
 
-            FileInfo templateDoc = new FileInfo(args[0]);
+            FileInfo templateDoc = new FileInfo(Path.Combine(di.FullName, args[0]));
             if (!templateDoc.Exists)
             {
                 Console.WriteLine("Error, {0} does not exist.", args[0]);
                 PrintUsage();
                 Environment.Exit(0);
             }
-            FileInfo dataFile = new FileInfo(args[1]);
+            FileInfo dataFile = new FileInfo(Path.Combine(di.FullName, args[1]));
             if (!dataFile.Exists)
             {
                 Console.WriteLine("Error, {0} does not exist.", args[1]);
                 PrintUsage();
                 Environment.Exit(0);
             }
-            FileInfo assembledDoc = new FileInfo(args[2]);
+            FileInfo assembledDoc = new FileInfo(Path.Combine(di.FullName, args[2]));
             if (assembledDoc.Exists)
             {
                 Console.WriteLine("Error, {0} exists.", args[2]);
