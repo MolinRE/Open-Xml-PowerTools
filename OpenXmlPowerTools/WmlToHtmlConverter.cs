@@ -3126,23 +3126,18 @@ namespace OpenXmlPowerTools
                 .Elements(A.graphicData)
                 .Elements(Pic._pic).Elements(Pic.blipFill).FirstOrDefault();
             if (blipFill == null) return null;
-            
-            var rLink = blipFill.Elements(A.blip).Attributes(R.link).FirstOrDefault();
-            if (rLink != null)
-            {
-                var descr = (string)containerElement
-                    .Elements(A.graphic)
-                    .Elements(A.graphicData)
-                    .Elements(Pic._pic)
-                    .Elements(Pic.nvPicPr)
-                    .Elements(Pic.cNvPr)
-                    .Attributes("descr")
-                    .FirstOrDefault();
-                if (descr == null)
-                {
-                    return null;
-                }
 
+            var rLink = blipFill.Elements(A.blip).Attributes(R.link).FirstOrDefault();
+            var descr = (string)containerElement
+                .Elements(A.graphic)
+                .Elements(A.graphicData)
+                .Elements(Pic._pic)
+                .Elements(Pic.nvPicPr)
+                .Elements(Pic.cNvPr)
+                .Attributes("descr")
+                .FirstOrDefault();
+            if (rLink != null && descr != null)
+            {
                 if (extentCx != null && extentCy != null)
                 {
                     var imageInfo = new ImageInfo()

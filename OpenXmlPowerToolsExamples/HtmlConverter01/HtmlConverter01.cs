@@ -23,6 +23,7 @@ http://www.microsoft.com/resources/sharedsource/licensingbasics/publiclicense.ms
 ***************************************************************************/
 
 using System;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Globalization;
@@ -47,13 +48,10 @@ class HtmlConverterHelper
         var tempDi = new DirectoryInfo(string.Format("ExampleOutput-{0:00}-{1:00}-{2:00}-{3:00}{4:00}{5:00}", n.Year - 2000, n.Month, n.Day, n.Hour, n.Minute, n.Second));
         tempDi.Create();
 
-        /*
-         * This example loads each document into a byte array, then into a memory stream, so that the document can be opened for writing without
-         * modifying the source document.
-         */
-        foreach (var file in Directory.GetFiles(@"C:\Users\k.komarov\source\example", "док с картинками_2_cut.docx"))//"Тест парсинга из Word (97-458893).docx"))
+        var picDirPath = @"C:\Users\k.komarov\source\example\pic";
+        foreach (var file in Directory.GetFiles(picDirPath, "док с картинками_?" + ".docx"))
         {
-            ConvertToHtml(file, @"C:\Users\k.komarov\source\example");
+            ConvertToHtml(file, picDirPath);
         }
     }
 
@@ -98,7 +96,7 @@ class HtmlConverterHelper
                     RestrictToSupportedNumberingFormats = false,
                     ImageHandler = imageInfo => ImageHandler(imageInfo, ref imageCounter, imageDirectoryName)
                 };
-
+                
                 XElement htmlElement = HtmlConverter.ConvertToHtml(wDoc, settings);
                 var htmlDocument = PostProcessDocument(htmlElement);
                 var htmlString = htmlDocument.ToString(SaveOptions.OmitDuplicateNamespaces);
@@ -107,12 +105,12 @@ class HtmlConverterHelper
 
                 // Produce HTML document with <!DOCTYPE html > declaration to tell the browser
                 // we are using HTML5.
-                var htmlDocumentOriginal = new XDocument(
-                    new XDocumentType("html", null, null, null),
-                    HtmlConverter.ConvertToHtml(wDoc, settings));
-                var htmlStringOriginal = htmlDocumentOriginal.ToString(SaveOptions.None);
-                File.WriteAllText(string.Format("{0}\\{1}_html_converter.html", 
-                    destFileName.DirectoryName, Path.GetFileNameWithoutExtension(destFileName.Name)), htmlStringOriginal, Encoding.UTF8);
+                //var htmlDocumentOriginal = new XDocument(
+                //    new XDocumentType("html", null, null, null),
+                //    HtmlConverter.ConvertToHtml(wDoc, settings));
+                //var htmlStringOriginal = htmlDocumentOriginal.ToString(SaveOptions.None);
+                //File.WriteAllText(string.Format("{0}\\{1}_html_converter.html", 
+                //    destFileName.DirectoryName, Path.GetFileNameWithoutExtension(destFileName.Name)), htmlStringOriginal, Encoding.UTF8);
             }
         }
     }
@@ -605,8 +603,13 @@ class HtmlConverterHelper
             var response = client.Execute(new RestRequest());
             if (response.IsSuccessful)
             {
+                Console.Write("\rЗагружено картинок: {0,4}", imageCounter);
                 imageInfo.ContentType = response.ContentType;
                 data = response.RawBytes;
+            }
+            else
+            {
+                Console.WriteLine("Не удалось загрузить {0}\r\n{1}", imageInfo.Url, response.ErrorMessage);
             }
         }
 
