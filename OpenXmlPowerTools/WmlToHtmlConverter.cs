@@ -891,25 +891,64 @@ namespace OpenXmlPowerTools
             {
                 if ((string) tcPr.Elements(W.vMerge).Attributes(W.val).FirstOrDefault() == "restart")
                 {
-                    var currentRow = element.Parent.ElementsBeforeSelf(W.tr).Count();
-                    var currentCell = element.ElementsBeforeSelf(W.tc).Count();
+                    var currentRowIndex = element.Parent.ElementsBeforeSelf(W.tr).Count();
+                    var currentCellIndex = element.ElementsBeforeSelf(W.tc).Count();
+                    var gridSpans = element.ElementsBeforeSelf(W.tc)
+                        .Where(s => s.Element(W.tcPr)?.Element(W.gridSpan) != null)
+                        .Select(s => s.Element(W.tcPr).Element(W.gridSpan).Attribute(W.val).Value)
+                        .ToArray();
+                    foreach (var val in gridSpans)
+                    {
+                        if (int.TryParse(val, out int gridSpanVal))
+                        {
+                            currentCellIndex += (gridSpanVal - 1);
+                        }
+                    }
+
                     var tbl = element.Parent.Parent;
                     int rowSpanCount = 1;
-                    currentRow += 1;
+                    currentRowIndex++;
                     while (true)
                     {
-                        var row = tbl.Elements(W.tr).Skip(currentRow).FirstOrDefault();
+                        // Take the next row, after the current
+                        var row = tbl.Elements(W.tr).Skip(currentRowIndex).FirstOrDefault();
                         if (row == null)
                             break;
-                        var cell2 = row.Elements(W.tc).Skip(currentCell).FirstOrDefault();
+
+                        // Cell on the corresponding to the curent column position
+                        var rowCurrentCellIndex = currentCellIndex;
+                        // Calculate index of the merging cell in this specific row:
+                        // Go through the cells in row, and if cell is 'gridSpan'ed, decrement the 'rowCurrentCellIndex'
+                        for (int i = 0; i < rowCurrentCellIndex; i++)
+                        {
+                            var cellInRow = row.Elements(W.tc).ElementAt(i);
+                            if (cellInRow.Element(W.tcPr) != null && cellInRow.Element(W.tcPr).Element(W.gridSpan) != null)
+                            {
+                                if (cellInRow.Element(W.tcPr).Element(W.gridSpan).Attribute(W.val) != null)
+                                {
+                                    var gridSpanValue = cellInRow.Element(W.tcPr).Element(W.gridSpan).Attribute(W.val).Value;
+                                    if (int.TryParse(gridSpanValue, out int gs) && gs > 1)
+                                    {
+                                        rowCurrentCellIndex -= (gs - 1);
+                                    }
+                                }
+                            }
+                        }
+
+                        // Take the cell on the corresponding to the curent column position
+                        var cell2 = row.Elements(W.tc).Skip(rowCurrentCellIndex).FirstOrDefault();
                         if (cell2 == null)
                             break;
+                        // If cell exists, check the vMerge property
                         if (cell2.Elements(W.tcPr).Elements(W.vMerge).FirstOrDefault() == null)
                             break;
+                        // If vMerge != restart, it's a merged cell
                         if ((string) cell2.Elements(W.tcPr).Elements(W.vMerge).Attributes(W.val).FirstOrDefault() == "restart")
                             break;
-                        currentRow += 1;
-                        rowSpanCount += 1;
+
+                        // Go to the next row
+                        currentRowIndex++;
+                        rowSpanCount++;
                     }
                     rowSpan = new XAttribute("rowspan", rowSpanCount);
                 }
