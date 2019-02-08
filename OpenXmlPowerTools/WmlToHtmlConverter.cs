@@ -451,33 +451,6 @@ namespace OpenXmlPowerTools
             // Transform hyperlinks to the XHTML h:a element.
             if (element.Name == W.hyperlink && element.Attribute(R.id) != null)
             {
-                //try
-                //{
-                //    string anchor = "";
-                //    var anchorElement = element.Attribute(W.anchor);
-                //    if (anchorElement != null)
-                //    {
-                //        anchor = '#' + anchorElement.Value;
-                //    }
-
-                //    var a = new XElement(Xhtml.a,
-                //        new XAttribute("href",
-                //            wordDoc.MainDocumentPart
-                //                .HyperlinkRelationships
-                //                .First(x => x.Id == (string)element.Attribute(R.id))
-                //                .Uri + anchor
-                //            ),
-                //        element.Elements(W.r).Select(run => ConvertRun(wordDoc, settings, run))
-                //        );
-                //    if (!a.Nodes().Any())
-                //        a.Add(new XText(""));
-                //    return a;
-                //}
-                //catch (UriFormatException)
-                //{
-                //    return element.Elements().Select(e => ConvertToHtmlTransform(wordDoc, settings, e, false, currentMarginLeft));
-                //}
-
                 try
                 {
                     var url = wordDoc.MainDocumentPart
@@ -512,6 +485,11 @@ namespace OpenXmlPowerTools
             // Transform contents of runs.
             if (element.Name == W.r)
             {
+                if (element.Value.StartsWith("12. "))
+                {
+
+                }
+
                 return ConvertRun(wordDoc, settings, element);
             }
 
@@ -1167,6 +1145,7 @@ namespace OpenXmlPowerTools
             var style = DefineParagraphStyle(paragraph, elementName, suppressTrailingWhiteSpace, currentMarginLeft, isBidi);
             var rtl = isBidi ? new XAttribute("dir", "rtl") : new XAttribute("dir", "ltr");
             var firstMark = isBidi ? new XEntity("#x200f") : null;
+            var abstractNumId = GetAbstractNumId(paragraph);
 
             // Analyze initial runs to see whether we have a tab, in which case we will render
             // a span with a defined width and ignore the tab rather than rendering the text
@@ -1190,6 +1169,7 @@ namespace OpenXmlPowerTools
             {
                 var paraElement1 = new XElement(elementName,
                     rtl,
+                    abstractNumId,
                     firstMark,
                     ConvertContentThatCanContainFields(wordDoc, settings, paragraph.Elements()));
                 paraElement1.AddAnnotation(style);
@@ -1202,12 +1182,24 @@ namespace OpenXmlPowerTools
                 : paragraph.Elements();
             var paraElement = new XElement(elementName,
                 rtl,
+                abstractNumId,
                 firstMark,
                 txElementsPrecedingTab,
                 ConvertContentThatCanContainFields(wordDoc, settings, elementsSucceedingTab));
             paraElement.AddAnnotation(style);
 
             return paraElement;
+        }
+
+        private static XAttribute GetAbstractNumId(XElement elem)
+        {
+            var attr = elem.Attribute(PtOpenXml.pt + "AbstractNumId");
+            if (attr != null)
+            {
+                return new XAttribute("abstractNumId", attr.Value);
+            }
+
+            return null;
         }
 
         private static List<object> TransformElementsPrecedingTab(WordprocessingDocument wordDoc, WmlToHtmlConverterSettings settings,
@@ -1517,10 +1509,27 @@ namespace OpenXmlPowerTools
                     content,
                     runEndMark);
 
+                var listItemRun = GetListItemRun(run);
+                if (listItemRun != null)
+                {
+                    xe.Add(new XAttribute("listItemRun", listItemRun));
+                }
+
                 xe.AddAnnotation(style);
                 content = xe;
             }
             return content;
+        }
+
+        private static string GetListItemRun(XElement r)
+        {
+            var attr = r.Attribute(PtOpenXml.pt + "ListItemRun");
+            if (attr != null)
+            {
+                return attr.Value;
+            }
+
+            return null;
         }
 
         [SuppressMessage("ReSharper", "FunctionComplexityOverflow")]
@@ -3385,8 +3394,7 @@ namespace OpenXmlPowerTools
                 sizeString.Length > 2 &&
                 sizeString.Substring(sizeString.Length - 2) == "pt")
             {
-                float size;
-                if (float.TryParse(sizeString.Substring(0, sizeString.Length - 2), out size))
+                if (float.TryParse(sizeString.Substring(0, sizeString.Length - 2), NumberStyles.Float | NumberStyles.AllowThousands, NumberFormatInfo.InvariantInfo, out float size))
                     return size;
             }
             return null;
