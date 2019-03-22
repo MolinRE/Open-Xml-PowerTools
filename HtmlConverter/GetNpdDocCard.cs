@@ -28,7 +28,7 @@ namespace HtmlConverter01
         /// <summary>
         /// Паттерн для поиска номеров документа.
         /// </summary>
-        private const string NumberPattern = @"(?:N|№)\s+((?:[^,\n\r\s]+(?:\s[а-я][,\n\r\s])?(?:,\s*)?))";
+        private const string NumberPattern = @"(?:N|№)\s+((?:[^,\s]+(?: [А-Яа-я][,\s])?(?:,\s*)?))";
         /// <summary>
         /// Паттерн фамилии и инициалов (для поиска подписи)
         /// </summary>
@@ -248,10 +248,13 @@ namespace HtmlConverter01
             }
 
             // 2.2 - номер
-            var docNumberMatches = Regex.Matches(fullStringHeader.ToString(), NumberPattern);
-            foreach (Match docNumberMatch in docNumberMatches)
+            foreach (var line in headerParagraphsTexts)
             {
-                DocNumbers.AddRange(docNumberMatch.Groups[1].Value.Split(',').Select(s => s.Trim()));
+                var docNumberMatches = Regex.Matches(line, NumberPattern);
+                foreach (Match docNumberMatch in docNumberMatches)
+                {
+                    DocNumbers.AddRange(docNumberMatch.Groups[1].Value.Split(',').Select(s => s.Trim()));
+                }
             }
 
             // Немного изменил оригинальную логику. Сначала находим все номера
@@ -454,6 +457,12 @@ namespace HtmlConverter01
                     if (paragraphNames.Count > 1 && paragraphNames.Skip(1).All(p => p.Value.Trim() != ""))
                     {
                         offset = 1;
+                    }
+
+                    // Если после абзаца в котором был матч идёт пустота - это точно абзац с датой-номером, пропускаем его и следущий
+                    if (paragraphNames.Count > 1 && paragraphNames[1].Value.Trim() == "")
+                    {
+                        offset = 2;
                     }
                 }
 

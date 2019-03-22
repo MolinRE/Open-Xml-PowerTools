@@ -62,14 +62,11 @@ namespace HtmlConverter01
 
         static void Main(string[] args)
         {
-            A a = new A();
-            var s = a.B.ToString();
-
             //ConsoleHelpers.ImportFromCsv("E:\\lobby.csv");
             //ParseBuffer("document.html");
             var picDirPath = @"C:\Users\k.komarov\source\example\bugs";
 
-            foreach (var file in Directory.GetFiles(picDirPath, "239 (1)" + ".docx"))
+            foreach (var file in Directory.GetFiles(picDirPath, "*" + ".docx"))
             {
                 ConvertToHtml(file, picDirPath);
             }
@@ -151,6 +148,9 @@ namespace HtmlConverter01
                     ConsoleHelpers.PostProcessAndSave(destFileName, htmlElement);
                     Console.WriteLine();
                     ConsoleHelpers.ConvertOriginalAndSave(wDoc, destFileName, settings);
+
+                    Console.WriteLine("Нажмите любую клавишу");
+                    Console.ReadKey();
                 }
             }
         }
