@@ -78,7 +78,7 @@ namespace HtmlConverter01
                 (card.DocRegions.Any() ? $"\r\n|-Регион: {card.DocRegionString}" : "") +
                 (string.IsNullOrEmpty(card.DocName) ? "" : $"\r\n|-Название: {(card.DocName.Length > 300 ? card.DocName.Remove(300) : card.DocName)}") +
                 (card.DocTypes.Any() ? $"\r\n|-Тип(ы): {card.DocTypeString}" : "") +
-                (card.DocLobbies.Any() ? $"\r\n|-Приянвший(-ие) орган(ы): {card.DocLobbyString}" : "") +
+                (card.DocLobbies.Any() ? $"\r\n|-Принявший(-ие) орган(ы): {card.DocLobbyString}" : "") +
                 (card.DocDate.HasValue ? $"\r\n|-Дата документа: {card.DocDate:dd.MM.yyyy}" : "") +
                 (card.DocNumbers.Any() ? $"\r\n|-Номер(а): {card.DocNumberString}" : "") +
                 (string.IsNullOrEmpty(card.RegNumber) ? "" : $"\r\n|-Регистрационный №: {card.RegNumber}") +
