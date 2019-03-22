@@ -242,7 +242,7 @@ namespace HtmlConverter01
             {
                 DocDate = date;
             }
-            if (RegDate == null && TryMatchDate(fullStringHeader.ToString(), DatePattern2, out date))
+            if (DocDate == null && TryMatchDate(fullStringHeader.ToString(), DatePattern2, out date))
             {
                 DocDate = date;
             }
@@ -585,14 +585,11 @@ namespace HtmlConverter01
 
                 if (DocDate.HasValue && DocNumbers.Any())
                 {
-                    foreach (var number in DocNumbers)
-                    {
-                        header.Add(new XElement("p",
-                            new XAttribute("id", "docnumber"),
-                            new XAttribute("class", "header"),
-                            new XAttribute("style", "text-align: center"),
-                            new XElement("strong", string.Format("от {0} № {1}", DocDate.Value.ToString(DateTemplate), number))));
-                    }
+                    header.Add(new XElement("p",
+                        new XAttribute("id", "docnumber"),
+                        new XAttribute("class", "header"),
+                        new XAttribute("style", "text-align: center"),
+                        new XElement("strong", string.Format("от {0} № {1}", DocDate.Value.ToString(DateTemplate), DocNumbers.First()))));
                 }
             }
             if (DocNumbers.Any() && DocCaseNumber != "")
