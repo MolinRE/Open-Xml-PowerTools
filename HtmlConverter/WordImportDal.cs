@@ -56,16 +56,16 @@ namespace HtmlConverter01
                     },
                     commandType: CommandType.StoredProcedure);
 
-                if (!result.Any())
-                {
-                    result = conn.Query<DocLobbyFormat>("webarm.WordImport_GetLobbyByText",
-                    new
-                    {
-                        lobbyName = new DbString() { Value = pText, IsFixedLength = false, Length = 256, IsAnsi = true },
-                        replace = true
-                    },
-                    commandType: CommandType.StoredProcedure);
-                }
+                //if (!result.Any())
+                //{
+                //    result = conn.Query<DocLobbyFormat>("webarm.WordImport_GetLobbyByText",
+                //    new
+                //    {
+                //        lobbyName = new DbString() { Value = pText, IsFixedLength = false, Length = 256, IsAnsi = true },
+                //        replace = true
+                //    },
+                //    commandType: CommandType.StoredProcedure);
+                //}
 
                 return result.ToList();
             }

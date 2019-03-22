@@ -14,10 +14,6 @@
     <PackageReference Include="xunit.runner.visualstudio" Version="2.4.0" />
     <PackageReference Include="xunit.runner.console" Version="2.4.0" />
   </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\OpenXmlPowerTools\OpenXmlPowerTools.csproj" />
-  </ItemGroup>
   
   <ItemGroup Condition=" '$(TargetFramework)' == 'net45' ">
     <Reference Include="WindowsBase" />

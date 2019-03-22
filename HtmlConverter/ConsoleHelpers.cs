@@ -8,17 +8,12 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
-using Serilog;
 
 namespace HtmlConverter01
 {
-    class ConsoleHelpers
+    public class ConsoleHelpers
     {
-        private static readonly ILogger logger = new LoggerConfiguration()
-            .WriteTo.Console()
-            .CreateLogger();
-
-        internal static XElement GetXElement(WordprocessingDocument wDoc, HtmlConverterSettings settings, string msg)
+        public static XElement GetXElement(WordprocessingDocument wDoc, HtmlConverterSettings settings, string msg)
         {
             Console.Write(msg);
             var stopwatch = new Stopwatch();

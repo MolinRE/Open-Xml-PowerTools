@@ -40,3 +40,4 @@ TestResults/
 # JetBrains
 .idea/
 _ReSharper.Caches/
+/WebArmTests/SampleDocuments

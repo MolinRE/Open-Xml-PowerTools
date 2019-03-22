@@ -744,7 +744,7 @@ namespace HtmlConverter01
         /// <summary>
         /// Форматирует блок "Сведения об изменяюших"
         /// </summary>
-        internal void FormatAcceptance(XElement documentBody)
+        public void FormatAcceptance(XElement documentBody)
         {
             // Слегка изменённый паттерн стандартной даты ("дд ММММ гггг [[г.][ода]]")
             const string dateTemplate = @"(?'date'\d{1,2}\s+[а-яА-Я]{3,10}\s+\d{4}\s+)[г\.ода\s]*";
@@ -876,7 +876,7 @@ namespace HtmlConverter01
         /// <summary>
         /// Оформление подписи. Возвращает True если подпись найдена и сформирована
         /// </summary>
-        internal bool FormatSignature(XElement documentBody)
+        public bool FormatSignature(XElement documentBody)
         {
             var wordParagraphs = documentBody
                 .Elements()
@@ -1055,7 +1055,7 @@ namespace HtmlConverter01
         /// Формирует блок Регистрация в минюсте
         /// </summary>
         /// <param name="signatureExists">Признак того, что блок формируем в конце. Если не задан, то блок формируем в начале.</param>
-        internal void CreateBlockRegistrationMinust(XElement documentBody, bool signatureExists)
+        public void CreateBlockRegistrationMinust(XElement documentBody, bool signatureExists)
         {
             if (string.IsNullOrEmpty(RegNumber) || !RegDate.HasValue)
             {
@@ -1086,7 +1086,7 @@ namespace HtmlConverter01
             insertAfter.AddAfterSelf(regParagraph);
         }
 
-        internal void FormatGrif(XElement documentBody)
+        public void FormatGrif(XElement documentBody)
         {
             var paragraphs = documentBody.Elements()
                 .Where(X.Paragraph)

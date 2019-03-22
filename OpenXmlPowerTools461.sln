@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "OpenXmlPowerTools461", "Ope
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HtmlConverter", "HtmlConverter\HtmlConverter.csproj", "{58A7E29F-7E67-4ECB-AE6C-380E3841B1EB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebArmTests", "WebArmTests\WebArmTests.csproj", "{6A9975DB-7ECC-43D2-BCD3-E79816CB472F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{58A7E29F-7E67-4ECB-AE6C-380E3841B1EB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{58A7E29F-7E67-4ECB-AE6C-380E3841B1EB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{58A7E29F-7E67-4ECB-AE6C-380E3841B1EB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6A9975DB-7ECC-43D2-BCD3-E79816CB472F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6A9975DB-7ECC-43D2-BCD3-E79816CB472F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6A9975DB-7ECC-43D2-BCD3-E79816CB472F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6A9975DB-7ECC-43D2-BCD3-E79816CB472F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

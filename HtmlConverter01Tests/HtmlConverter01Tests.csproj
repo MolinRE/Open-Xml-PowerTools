@@ -125,10 +125,6 @@
       <Project>{bc9e7408-508d-482d-8602-96e76acbb5ea}</Project>
       <Name>HtmlConverter01</Name>
     </ProjectReference>
-    <ProjectReference Include="..\OpenXmlPowerTools\OpenXmlPowerTools.csproj">
-      <Project>{6f957ff3-afcc-4d69-8fbc-71ae21bc45c9}</Project>
-      <Name>OpenXmlPowerTools</Name>
-    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets" Condition="Exists('$(VSToolsPath)\TeamTest\Microsoft.TestTools.targets')" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

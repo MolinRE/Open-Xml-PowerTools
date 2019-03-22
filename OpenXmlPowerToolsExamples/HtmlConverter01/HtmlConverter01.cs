@@ -40,19 +40,38 @@ using DocumentFormat.OpenXml.Packaging;
 using HtmlConverter01;
 using OpenXmlPowerTools;
 using RestSharp;
+using HtmlAgilityPack;
+using HtmlConverter01.Models;
 
 class HtmlConverterHelper
 {
+    static List<char> trim = new List<char> { ' ', '\n' };
+    // выбрасываем инлайн теги (очистка текста от стилей)
+    static List<string> styleTags = new List<string>() { "span", "strong", "em", "u", "s", "sub", "sup", "font", "hr", "i", "b" };
+    static Regex imagePattern = new Regex(@"/^\/data\/doc\/image\/(-)?\d*(\?moduleId=(\d)+&id=(\d)+)?$/", RegexOptions.Compiled);
+    static Regex imageBase64Pattern = new Regex(@"data:(image\/\w*);base64,([A-Za-z0-9\/+=]*)", RegexOptions.Compiled);
     const string documentUrlPattern = "document/(?<moduleid>[^/]+)/(?<id>[^/]+)(/(?<anchor>[^/]+))?";
+    private static IDocFilesHandler docFilesHandler = new MockDocFilesHandler();
 
     static void Main(string[] args)
     {
         //ConsoleHelpers.ImportFromCsv("E:\\lobby.csv");
-        var picDirPath = @"C:\Users\k.komarov\source\example\list";
-        foreach (var file in Directory.GetFiles(picDirPath, "*" + ".docx"))
+        //ParseBuffer("document.html");
+        var picDirPath = @"C:\Users\k.komarov\source\example\autoformat";
+
+        foreach (var file in Directory.GetFiles(picDirPath, "АОФР ошибки 69" + ".docx"))
         {
             ConvertToHtml(file, picDirPath);
         }
+    }
+
+    private static void ParseBuffer(string fileName)
+    {
+        fileName = Path.Combine(@"C:\Users\k.komarov\source\example\clipboard", fileName);
+        var htmlDocument = Common.ReadHtmlDocument(fileName);
+        var result = PostProcessDocument(htmlDocument);
+
+        result.Save(Path.ChangeExtension(fileName, "xml"));
     }
 
     public static void ConvertToHtml(string file, string outputDirectory)
@@ -104,14 +123,8 @@ class HtmlConverterHelper
                 var getCard = new GetNpdDocCard();
                 var body = htmlElement.Element(XN("body")).Element(XN("div"));
 
-                // очищаем формат
-                //getCard.ClearFormatBefore(wordDocument);
-
-                // формируем шапку
+                // формируем шапку и контент
                 getCard.FormatHeader(body);
-
-                // форматируем контент
-                //getCard.FormatContent(body);
 
                 getCard.FormatAcceptance(body);
 
@@ -124,51 +137,58 @@ class HtmlConverterHelper
                 getCard.CreateBlockRegistrationMinust(body, signatureExists);
 
                 ConsoleHelpers.PostProcessAndSave(destFileName, htmlElement);
-                Console.WriteLine();
-                ConsoleHelpers.ConvertOriginalAndSave(wDoc, destFileName, settings);
-
-                //Console.WriteLine("Нажмите любую клавишу");
-                //Console.ReadKey();
+                //Console.WriteLine();
+                //ConsoleHelpers.ConvertOriginalAndSave(wDoc, destFileName, settings);
             }
         }
     }
     
     public static XElement PostProcessDocument(XElement html)
     {
-        var body = new XElement("div");
+        var body = html.Descendants().First(p => p.Name.LocalName == "body");
+        UnwrapElement(body);
+        //body.Name = "div";
+        var images = body.Descendants("img").ToArray();
 
-        var temp = html.Elements()
-                .First(p => p.Name.LocalName == "body").Elements()
-                .SelectMany(s => s.Elements())
-                .Select(s => s.Value)
-                .ToArray();
+        //// Выбираем элементы внутри дивов
+        //foreach (var elem in html.Elements()
+        //        .First(p => p.Name.LocalName == "body").Elements()
+        //        .SelectMany(s => s.Elements()))
+        //{
+        //    // Иногда элементы обернуты дополнительным div-ом
+        //    if (elem.Name.LocalName == "div")
+        //    {
+        //        // Таблицы всегда им обернуты - их оставляем как есть
+        //        if (elem.Elements().Any() && elem.Elements().First().Name.LocalName == "table")
+        //        {
+        //            body.Add(elem);
+        //        }
+        //        // Иначе добавляем все дочерние элементы
+        //        else
+        //        {
+        //            foreach (var child in elem.Elements())
+        //            {
+        //                body.Add(child);
+        //            }
+        //        }
+        //    }
+        //    else
+        //    {
+        //        body.Add(elem);
+        //    }
+        //}
 
-        // Выбираем элементы внутри дивов
-        foreach (var elem in html.Elements()
-                .First(p => p.Name.LocalName == "body").Elements()
-                .SelectMany(s => s.Elements()))
+        body.Descendants()
+                .Where(IsRedundantEmptyParagraph)
+                .Remove();
+
+        foreach (var span in body.Elements()
+            .Where(p => p.Name.LocalName == "span")
+            .ToArray())
         {
-            // Иногда элементы обернуты дополнительным div-ом
-            if (elem.Name.LocalName == "div")
-            {
-                // Таблицы всегда им обернуты - их оставляем как есть
-                if (elem.Elements().Any() && elem.Elements().First().Name.LocalName == "table")
-                {
-                    body.Add(elem);
-                }
-                // Иначе добавляем все дочерние элементы
-                else
-                {
-                    foreach (var child in elem.Elements())
-                    {
-                        body.Add(child);
-                    }
-                }
-            }
-            else
-            {
-                body.Add(elem);
-            }
+            var paraElement = new XElement("p", span);
+            span.AddBeforeSelf(paraElement);
+            span.Remove();
         }
 
         // Активный список
@@ -278,10 +298,12 @@ class HtmlConverterHelper
 
             TransformHeaders(elem);
 
-            RemoveSpans(elem);
+            CleanStyles(elem);
+            //RemoveSpans(elem);
         }
 
-        body.Elements().Where(p => p.HasAttributeValue("toDelete", "true")).Remove();
+        body.Elements()
+            .Where(p => p.HasAttributeValue("toDelete", "true")).Remove();
 
         //foreach (var p in body.Elements().ToArray())
         //{
@@ -293,18 +315,118 @@ class HtmlConverterHelper
         //}
 
         // Удаляем href ссылок
-        foreach (var linkElem in body.Descendants(XN("a")).ToArray())
+        foreach (var linkElem in body.Descendants()
+            .Where(p => p.Name.LocalName == "a")
+            .ToArray())
         {
             linkElem.AddAfterSelf(linkElem.Value);
             linkElem.Remove();
         }
 
+        TransformImages(body);
         TransformTablesToCke(body);
         TransformParagprahs(body);
 
         CleanupStyles(body);
 
         return body;
+    }
+
+    public static void TransformImages(XElement body)
+    {
+        int saveErrorCount = 0;
+        int parseErrorCount = 0;
+        int count = 1;
+        // Если есть атрибут id - это картинка уже загружена и обработана
+        foreach (var imgElem in body.Descendants()
+            .Where(p => p.Name == "img" && !p.HasAttribute("id"))
+            .ToArray())
+        {
+            var srcAttr = imgElem.Attribute("src");
+            var isFakeObj = imgElem.HasAttribute("data-cke-realelement");
+            if (srcAttr != null)
+            {
+                if (!imagePattern.IsMatch(srcAttr.Value) && !isFakeObj)
+                {
+                    var match = imageBase64Pattern.Match(srcAttr.Value);
+                    if (match.Success)
+                    {
+                        var uploadImage = new UploadImageBase64(0, 0);
+                        uploadImage.ImageBase64 = match.Groups[2].Value;
+                        if (imgElem.HasAttribute("alt"))
+                        {
+                            uploadImage.FileName = imgElem.Attribute("alt").Value;
+                        }
+                        else
+                        {
+                            uploadImage.FileName = count + "." + match.Groups[1].Value.Split('/')[1];
+                        }
+                        //uploadImage.MimeTypeId = uploadImage.MimeType.Id;
+
+                        var result = docFilesHandler.SetDocumentImageBase64(uploadImage);
+                        if (result.Result)
+                        {
+                            imgElem.Add(
+                                new XAttribute("id", "i" + result.Id),
+                                new XAttribute("class", "inimg"));
+                        }
+                        else
+                        {
+                            saveErrorCount++;
+                        }
+
+                    }
+                    else
+                    {
+                        parseErrorCount++;
+                        imgElem.Remove();
+                        continue;
+                    }
+                }
+                else
+                {
+                    // Картинка вставлена ссылкой - ничего не делаем
+                }
+            }
+
+            //width: 2.797067in; height: 1.709302in
+            var size = imgElem.Attribute("width");
+            if (size != null)
+            {
+                imgElem.SetStyle("width", size.Value);
+                size.Remove();
+            }
+            size = imgElem.Attribute("height");
+            if (size != null)
+            {
+                imgElem.SetStyle("height", size.Value);
+                size.Remove();
+            }
+
+            // Обычно здесь текст уровня "Рисунок_x0020_1", сохраним его на всякий случай
+            if (imgElem.HasAttribute("shapes"))
+            {
+                imgElem.Add(new XAttribute("alt", imgElem.Attribute("shapes").Value));
+                imgElem.Attribute("shapes").Remove();
+            }
+        }
+
+        if (parseErrorCount + saveErrorCount > 0)
+        {
+            Console.WriteLine("Не удалось загрузить {0} {1}, " +
+                "возможно вы привысили допустимый объем буфера для передачи катртинок в читаемом формате. " +
+                "Пожалуйста, загрузите {1} вручную через меню, или попробуйте скопировать и вставить меньший объем",
+                parseErrorCount + saveErrorCount,
+                PluralNouns(parseErrorCount + saveErrorCount, "изображение", "изображения", "изображений"));
+        }
+    }
+
+    public static bool IsRedundantEmptyParagraph(XElement element)
+    {
+        return element.Value.Length == 0
+            && element.Name == "p"
+            && element.Parent.Name != "div"
+            && element.Parent.Name != "td";
     }
 
     private static bool IsNotListStart(XElement body, XElement elem, out string startNumber)
@@ -321,6 +443,39 @@ class HtmlConverterHelper
             }
         }
         return listItemRun != "1";
+    }
+
+    private static bool IsRedundantDiv(XElement elem)
+    {
+        if (elem.Name.LocalName != "div")
+        {
+            return false;
+        }
+
+        var hasTable = elem.Elements().Count() == 1 &&
+            elem.Elements().First().Name.LocalName == "table";
+
+        return !hasTable;
+    }
+
+    private static void UnwrapElement(XElement body)
+    {
+        foreach (var child in body.Elements().ToArray())
+        {
+            UnwrapElement(child);
+        }
+
+        if (body.Name == "div" && body.HasAttribute("class"))
+        {
+
+        }
+
+        if (IsRedundantDiv(body))
+        {
+            body.AddBeforeSelf(body.Nodes());
+            //body.Nodes().Remove();
+            body.Remove();
+        }
     }
 
     private static bool IsInnerElement(XElement list, XElement elem, XElement previous)
@@ -386,9 +541,12 @@ class HtmlConverterHelper
 
     private static void TransformTablesToCke(XElement bodyDiv)
     {
-        foreach (var tableElement in bodyDiv.Descendants().Where(p => p.Name.LocalName == "table"))
+        foreach (var tableElement in bodyDiv.Descendants()
+            .Where(p => p.Name.LocalName == "table")
+            .ToArray())
         {
             tableElement.Attributes().Where(p => p.Name != "class" && p.Name != "align").Remove();
+            tableElement.RemoveAttribute("MsoTableGrid");
             // Для CKE: у всех элементов-таблиц должен быть класс cke_show_border
             if (!tableElement.HasClass("cke_show_border"))
             {
@@ -530,6 +688,10 @@ class HtmlConverterHelper
                                     for (var j = 0; j < colSpan; j++)
                                     {
                                         var neighbour = nRow[neighborCol + j];
+                                        if (neighbour == null)
+                                        {
+                                            continue;
+                                        }
                                         if (byStyle)
                                         {
                                             var cellStyle = neighbour.GetStyle("border");
@@ -630,11 +792,11 @@ class HtmlConverterHelper
                         }
                         if (width != null)
                         {
-                            ckCell.SetStyle("width", ConvertToPx(width));
+                            ckCell.SetStyle("width", ConvertToCke(width));
                         }
                         if (height != null)
                         {
-                            ckCell.SetStyle("height", ConvertToPx(height));
+                            ckCell.SetStyle("height", ConvertToCke(height));
                         }
                         cells.Add(ckCell);
                     }
@@ -663,22 +825,38 @@ class HtmlConverterHelper
             var tbody = new XElement("tbody", tableContent);
             tableElement.Add(tbody);
             tableContent.Remove();
+            if (tableElement.Parent != null && tableElement.Parent.Name.LocalName != "div")
+            {
+                var wrapperDiv = new XElement("div", tableElement);
+                tableElement.AddBeforeSelf(wrapperDiv);
+                tableElement.Remove();
+            }
         }
     }
 
-    private static string ConvertToPx(string style)
+    /// <summary>
+    /// Конвертирует значение ширины/высоты в допустимый для CKE формат (пиксели или проценты).
+    /// </summary>
+    /// <param name="value">Значение в формате "1.32px", "1.32pt", "1,32", "1.32%" и т.д.</param>
+    /// <returns></returns>
+    private static string ConvertToCke(string style)
     {
         string pattern = @"([\d.,]+)\s?([a-zA-Z%]*)";
         var match = Regex.Match(style, pattern, RegexOptions.Compiled);
         if (match.Success)
         {
+            var valueType = "px";
             var value = float.Parse(match.Groups[1].Value, NumberStyles.Any, CultureInfo.InvariantCulture);
-            if (match.Groups[2].Value == "pt")
+            if (match.Groups[2].Value == "%")
+            {
+                valueType = "%";
+            }
+            else if (match.Groups[2].Value == "pt")
             {
                 value *= (float)1.33;
             }
 
-            return value.ToString(CultureInfo.InvariantCulture) + "px";
+            return value.ToString(CultureInfo.InvariantCulture) + valueType;
         }
 
         return style;
@@ -1034,6 +1212,119 @@ class HtmlConverterHelper
         }
     }
 
+    // Вынуть все внутренние элементы на верхний уровень
+    protected static XNode[] CleanStyles(XElement elem)
+    {
+        var children = elem.Elements().ToArray();
+        XElement node;
+        for (int i = 0; i < children.Count(); i++)
+        {
+            node = children.ElementAt(i);
+            if (node.NodeType == XmlNodeType.Comment)
+            {
+                node.Remove();
+            }
+            else
+            {
+                var name = node.Name.LocalName;
+                if (styleTags.Contains(name))
+                {
+                    var nodes = CleanStyles(node);
+                    for (int j = 0; j < nodes.Count(); j++)
+                    {
+                        node.AddBeforeSelf(nodes.ElementAt(j));
+                    }
+                    node.Remove();
+                    continue;
+                }
+                CleanStyles(node);
+            }
+
+        }
+        return TransformNodes(elem);
+    }
+
+    private static XNode[] TransformNodes(XElement elem)
+    {
+        // Частный случай библиотеки импорта из Word
+        if (elem.Value == "#x200e")
+        {
+            return new XNode[] { new XElement("br") };
+        }
+
+        if (elem.Name == "b" || elem.Name == "strong" || elem.GetStyle("font-weight") == "bold")
+        {
+            var node = new XElement("strong", elem.Value);
+            var text = elem.NextNode as XText;
+            if (text != null && trim.Contains(text.Value[0]))
+            {
+                node.Value += " ";
+            }
+            return new XNode[] { node };
+        }
+        if (elem.Name == "i" || elem.Name == "em" || elem.GetStyle("font-style") == "italic")
+        {
+            var node = new XElement("em", elem.Value);
+            var text = elem.NextNode as XText;
+            if (text != null && trim.Contains(text.Value[0]))
+            {
+                node.Value += " ";
+            }
+            return new XNode[] { node };
+        }
+
+        string prefix = "";
+        string postfix = "";
+        foreach (var node in elem.Nodes().OfType<XText>().ToArray())
+        {
+            if (node.Value.Contains('\n'))
+            {
+                // Смотрим соседние элементы, чтобы сохранить пробелы между словами
+                if (node.Value[0] == ' ' && !PreviousElementEndsWith(elem, " "))
+                {
+                    prefix = " ";
+                }
+                if (node.Value.Last() == ' ' && !NextElementStartsWith(elem, " "))
+                {
+                    postfix = " ";
+                }
+                string value = string.Join(" ", node.Value.Split(new char[] { '\n' }, StringSplitOptions.RemoveEmptyEntries).Select(s => s.Trim()));
+                node.Value = prefix + value + postfix;
+            }
+            // Частный случай библиотеки импорта из Word
+            if (node.Value == "#x200e")
+            {
+                // Это текстовая нода, рядом остается <br> - её мы не трогаем и переносы не ломаем
+                node.Remove();
+            }
+        }
+
+        var texts = elem.Nodes().Select(s => s.ToString()).ToArray();
+        return elem.Nodes().ToArray();
+    }
+
+    public static bool NextElementStartsWith(XElement src, string value)
+    {
+        var next = src.ElementsAfterSelf().FirstOrDefault();
+        if (next != null && next.Value.Length >= value.Length)
+        {
+            return next.Value.Remove(value.Length) == value;
+        }
+
+        return false;
+    }
+
+    public static bool PreviousElementEndsWith(XElement src, string value)
+    {
+        var previous = src.ElementsBeforeSelf().LastOrDefault();
+        if (previous != null && previous.Value.Length >= value.Length)
+        {
+            return previous.Value.Substring(previous.Value.Length - value.Length) == value;
+        }
+
+        return false;
+    }
+
     private static XElement TransformToListItemElement(XElement elem, string listName)
     {
         var spanElements = elem.Elements(XN("span")).ToArray();
@@ -1303,7 +1594,6 @@ class HtmlConverterHelper
 
     public static XElement ImageHandler(ImageInfo imageInfo, ref int imageCounter, string imageDirectoryName)
     {
-        byte[] data = null;
         var localDirInfo = new DirectoryInfo(imageDirectoryName);
         if (!localDirInfo.Exists)
         {
@@ -1312,6 +1602,8 @@ class HtmlConverterHelper
         ++imageCounter;
         Console.Write("\rОбработка картинок... {0,5}", imageCounter);
 
+        // Контейнер изображения, если оно прикреплено ссылкой
+        byte[] data = null;
         if (imageInfo.Bitmap == null)
         {
             if (imageInfo.Url == null)
@@ -1337,8 +1629,9 @@ class HtmlConverterHelper
         ImageFormat imageFormat = null;
         switch (extension)
         {
-            //case "x-wmf":
             case "png":
+            case "x-emf":
+            case "x-wmf":
                 extension = "png";
                 imageFormat = ImageFormat.Png;
                 break;
@@ -1356,10 +1649,14 @@ class HtmlConverterHelper
                 extension = "gif";
                 imageFormat = ImageFormat.Gif;
                 break;
-            case "x-wmf":
-                extension = "wmf";
-                imageFormat = ImageFormat.Wmf;
-                break;
+            //case "x-wmf":
+            //    extension = "png";
+            //    imageFormat = ImageFormat.Wmf;
+            //    break;
+            //case "x-emf":
+            //    extension = "png";
+            //    imageFormat = ImageFormat.Emf;
+            //    break;
         }
 
         // If the image format isn't one that we expect, ignore it,
@@ -1374,14 +1671,29 @@ class HtmlConverterHelper
             // Копируем данные через мемори стрим из Bitmap в img.Data
             using (var stream = new MemoryStream())
             {
-                imageInfo.Bitmap.Save(stream, imageFormat == ImageFormat.Wmf ? ImageFormat.Png : imageFormat);
-                data = new byte[stream.Length];
-                stream.Position = 0;
-                stream.Read(data, 0, data.Length);
+                try
+                {
+                    if (imageInfo.Bitmap is Metafile)
+                    {
+                        // Если это метафайл, конвертируем
+                        ConvertMetaFile((Metafile)imageInfo.Bitmap, stream);
+                    }
+                    else
+                    {
+                        imageInfo.Bitmap.Save(stream, imageFormat);
+                    }
+                    stream.Position = 0;
+                    data = new byte[stream.Length];
+                    stream.Read(data, 0, data.Length);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex.Message);
+                }
             }
         }
 
-        string imageFileName = string.Format("{0}/image{1}.{2}", imageDirectoryName, imageCounter, extension);
+        string imageFileName = string.Format("{0}\\image{1}.{2}", imageDirectoryName, imageCounter, extension);
         try
         {
             if (data != null)
@@ -1414,6 +1726,108 @@ class HtmlConverterHelper
             imageInfo.AltText != null ? new XAttribute(NoNamespace.alt, imageInfo.AltText) : null);
 
         return imageElement;
+    }
+
+
+    /// <summary>
+    /// Возвращает соотвествующую множественную форму слова, в зависимости от заданного числа.
+    /// </summary>
+    /// <param name="count">Число, обозначающее множественность.</param>
+    /// <param name="wordForms">3 формы слова, используемые для разных случаев: одно, несколько, много.
+    /// <para>Например: "собака", "собаки", "собак".</para>Например, "</param>
+    /// <returns>Подходящее слово.</returns>
+    public static string PluralNouns(int count, params string[] wordForms)
+    {
+        if (count > 19)
+        {
+            switch (count % 10)
+            {
+                case 1:
+                    return wordForms[0];
+                case 2:
+                case 3:
+                case 4:
+                    return wordForms[1];
+                default:
+                    return wordForms[2];
+            }
+        }
+        else
+        {
+            if (count > 4)
+                return wordForms[2];
+            else
+            {
+                switch (count % 10)
+                {
+                    case 0:
+                        return wordForms[2];
+                    case 1:
+                        return wordForms[0];
+                    default:
+                        return wordForms[1];
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// Saves the meta file.
+    /// </summary>
+    /// <param name="source">The source.</param>
+    /// <param name="destination">The destination.</param>
+    /// <param name="scale">The scale. Default value is 4.</param>
+    /// <param name="backgroundColor">Color of the background.</param>
+    /// <param name="format">The format. Default is PNG.</param>
+    /// <param name="parameters">The parameters.</param>
+    public static void ConvertMetaFile(
+        Metafile img,
+        Stream destination,
+        float scale = 4f,
+        Color? backgroundColor = null,
+        ImageFormat format = null,
+        EncoderParameters parameters = null)
+    {
+        //using (var img = new Metafile(source))
+        //{
+            var f = format ?? ImageFormat.Png;
+
+            //Determine default background color. 
+            //Not all formats support transparency. 
+            if (backgroundColor == null)
+            {
+                var transparentFormats = new ImageFormat[] { ImageFormat.Gif, ImageFormat.Png, ImageFormat.Wmf, ImageFormat.Emf };
+                var isTransparentFormat = transparentFormats.Contains(f);
+
+                backgroundColor = isTransparentFormat ? Color.Transparent : Color.White;
+            }
+
+            //header contains DPI information
+            var header = img.GetMetafileHeader();
+
+            //calculate the width and height based on the scale
+            //and the respective DPI
+            var width = (int)Math.Round((scale * img.Width / header.DpiX * 100), 0, MidpointRounding.ToEven);
+            var height = (int)Math.Round((scale * img.Height / header.DpiY * 100), 0, MidpointRounding.ToEven);
+
+            using (var bitmap = new Bitmap(width, height))
+            {
+                using (var g = Graphics.FromImage(bitmap))
+                {
+                    //fills the background
+                    g.Clear(backgroundColor.Value);
+
+                    //reuse the width and height to draw the image
+                    //in 100% of the square of the bitmap
+                    g.DrawImage(img, 0, 0, bitmap.Width, bitmap.Height);
+                }
+
+                //get codec based on GUID
+                var codec = ImageCodecInfo.GetImageEncoders().FirstOrDefault(c => c.FormatID == f.Guid);
+
+                bitmap.Save(destination, codec, parameters);
+            }
+        //}
     }
 
     /// <summary>
