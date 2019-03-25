@@ -43,6 +43,9 @@ namespace WebArmTests
 
         private static GetNpdDocCard ConvertToHtml(string fileName)
         {
+            // Настраиваем кэш лобби, чтобы не лезть в базу
+            WordImportDal.Lobbies = WordImportDal.GetAllLobbies();
+
             var fi = new FileInfo(fileName);
             Console.WriteLine(fi.Name);
             byte[] byteArray = File.ReadAllBytes(fi.FullName);
@@ -122,7 +125,7 @@ namespace WebArmTests
 
             Assert.IsNotNull(docCard.DocLobbies);
             Assert.AreEqual(1, docCard.DocLobbies.Select(s => s.ID).Distinct().Count(), docLobbyCountAreNotEqual);
-            Assert.AreEqual("Министерство природных ресурсов и экологии РФ", docCard.DocLobbies[0].Name, docLobbiesAreNotEqual);
+            Assert.AreEqual("Министерство природных ресурсов и экологии РФ", docCard.DocLobbies[0].NameHeader, docLobbiesAreNotEqual);
 
             Assert.IsTrue(docCard.DocDate.HasValue, docDateIsNull);
             Assert.AreEqual(new DateTime(2015, 12, 28).Date, docCard.DocDate.Value.Date, docDatesAreNotEqual);
@@ -159,7 +162,7 @@ namespace WebArmTests
 
             Assert.IsNotNull(docCard.DocLobbies);
             Assert.AreEqual(1, docCard.DocLobbies.Select(s => s.ID).Distinct().Count(), docLobbyCountAreNotEqual);
-            Assert.AreEqual(docCard.DocLobbies[0].Name, "Федеральная налоговая служба");
+            Assert.AreEqual(docCard.DocLobbies[0].NameHeader, "Федеральная налоговая служба");
 
             Assert.IsTrue(docCard.DocDate.HasValue);
             Assert.AreEqual(docCard.DocDate.Value.Date, new DateTime(2011, 11, 29).Date);
@@ -196,7 +199,7 @@ namespace WebArmTests
 
             Assert.IsNotNull(docCard.DocLobbies);
             Assert.AreEqual(1, docCard.DocLobbies.Select(s => s.ID).Distinct().Count(), docLobbyCountAreNotEqual);
-            Assert.AreEqual(docCard.DocLobbies[0].Name, "Федеральная налоговая служба");
+            Assert.AreEqual(docCard.DocLobbies[0].NameHeader, "Федеральная налоговая служба");
 
             Assert.IsTrue(docCard.DocDate.HasValue);
             Assert.AreEqual(docCard.DocDate.Value.Date, new DateTime(2016, 12, 27).Date);
@@ -232,8 +235,8 @@ namespace WebArmTests
 
             Assert.IsNotNull(docCard.DocLobbies);
             Assert.AreEqual(2, docCard.DocLobbies.Select(s => s.ID).Distinct().Count(), docLobbyCountAreNotEqual);
-            Assert.AreEqual("Министерство финансов РФ", docCard.DocLobbies[0].Name);
-            Assert.AreEqual("Федеральная налоговая служба", docCard.DocLobbies[1].Name);
+            Assert.AreEqual("Министерство финансов РФ", docCard.DocLobbies[0].NameHeader);
+            Assert.AreEqual("Федеральная налоговая служба", docCard.DocLobbies[1].NameHeader);
 
             Assert.IsTrue(docCard.DocDate.HasValue);
             Assert.AreEqual(new DateTime(2016, 5, 25).Date, docCard.DocDate.Value.Date);
@@ -269,9 +272,9 @@ namespace WebArmTests
 
             Assert.IsNotNull(docCard.DocLobbies);
             Assert.AreEqual(3, docCard.DocLobbies.Select(s => s.ID).Distinct().Count(), docLobbyCountAreNotEqual);
-            Assert.AreEqual("Федеральная налоговая служба", docCard.DocLobbies[0].Name);
-            Assert.AreEqual("Министерство экономического развития и торговли РФ", docCard.DocLobbies[1].Name);
-            Assert.AreEqual("Министерство финансов РФ", docCard.DocLobbies[2].Name);
+            Assert.AreEqual("Федеральная налоговая служба", docCard.DocLobbies[0].NameHeader);
+            Assert.AreEqual("Министерство экономического развития и торговли РФ", docCard.DocLobbies[1].NameHeader);
+            Assert.AreEqual("Министерство финансов РФ", docCard.DocLobbies[2].NameHeader);
 
             Assert.IsTrue(docCard.DocDate.HasValue);
             Assert.AreEqual(new DateTime(2005, 3, 10).Date, docCard.DocDate.Value.Date);
@@ -306,7 +309,7 @@ namespace WebArmTests
 
             Assert.IsNotNull(docCard.DocLobbies);
             Assert.AreEqual(1, docCard.DocLobbies.Select(s => s.ID).Distinct().Count(), docLobbyCountAreNotEqual);
-            Assert.AreEqual("Арбитражный суд Уральского округа", docCard.DocLobbies[0].Name);
+            Assert.AreEqual("Арбитражный суд Уральского округа", docCard.DocLobbies[0].NameHeader);
 
             Assert.IsTrue(docCard.DocDate.HasValue);
             Assert.AreEqual(docCard.DocDate.Value.Date, new DateTime(2018, 10, 23).Date);
@@ -338,7 +341,7 @@ namespace WebArmTests
 
             Assert.IsNotNull(docCard.DocLobbies);
             Assert.AreEqual(1, docCard.DocLobbies.Select(s => s.ID).Distinct().Count(), docLobbyCountAreNotEqual);
-            Assert.AreEqual(docCard.DocLobbies[0].Name, "Министерство финансов РФ");
+            Assert.AreEqual(docCard.DocLobbies[0].NameHeader, "Министерство финансов РФ");
 
             Assert.IsTrue(docCard.DocDate.HasValue);
             Assert.AreEqual(docCard.DocDate.Value.Date, new DateTime(2017, 12, 13).Date);
@@ -373,7 +376,7 @@ namespace WebArmTests
 
             Assert.IsNotNull(docCard.DocLobbies);
             Assert.AreEqual(1, docCard.DocLobbies.Select(s => s.ID).Distinct().Count(), docLobbyCountAreNotEqual);
-            Assert.AreEqual(docCard.DocLobbies[0].Name, "Федеральная налоговая служба");
+            Assert.AreEqual(docCard.DocLobbies[0].NameHeader, "Федеральная налоговая служба");
 
             Assert.IsTrue(docCard.DocDate.HasValue);
             Assert.AreEqual(docCard.DocDate.Value.Date, new DateTime(2016, 12, 27).Date);
@@ -410,7 +413,7 @@ namespace WebArmTests
 
             Assert.IsNotNull(docCard.DocLobbies);
             Assert.AreEqual(1, docCard.DocLobbies.Select(s => s.ID).Distinct().Count(), docLobbyCountAreNotEqual);
-            Assert.AreEqual(docCard.DocLobbies[0].Name, "Федеральная налоговая служба");
+            Assert.AreEqual(docCard.DocLobbies[0].NameHeader, "Федеральная налоговая служба");
 
             Assert.IsTrue(docCard.DocDate.HasValue);
             Assert.AreEqual(docCard.DocDate.Value.Date, new DateTime(2016, 12, 27).Date);
@@ -444,7 +447,7 @@ namespace WebArmTests
 
             Assert.IsNotNull(docCard.DocLobbies);
             Assert.AreEqual(1, docCard.DocLobbies.Select(s => s.ID).Distinct().Count(), docLobbyCountAreNotEqual);
-            Assert.AreEqual(docCard.DocLobbies[0].Name, "Арбитражный суд Нижегородской области");
+            Assert.AreEqual(docCard.DocLobbies[0].NameHeader, "Арбитражный суд Нижегородской области");
 
             Assert.IsTrue(docCard.DocDate.HasValue);
             Assert.AreEqual(docCard.DocDate.Value.Date, new DateTime(2015, 05, 19).Date);
@@ -476,7 +479,7 @@ namespace WebArmTests
 
             Assert.IsNotNull(docCard.DocLobbies);
             Assert.AreEqual(1, docCard.DocLobbies.Select(s => s.ID).Distinct().Count(), docLobbyCountAreNotEqual);
-            Assert.AreEqual(docCard.DocLobbies[0].Name, "Федеральный арбитражный суд Северо-Западного округа");
+            Assert.AreEqual(docCard.DocLobbies[0].NameHeader, "Федеральный арбитражный суд Северо-Западного округа");
 
             Assert.IsTrue(docCard.DocDate.HasValue);
             Assert.AreEqual(docCard.DocDate.Value.Date, new DateTime(2014, 07, 07).Date);
@@ -508,7 +511,7 @@ namespace WebArmTests
 
             Assert.IsNotNull(docCard.DocLobbies);
             Assert.AreEqual(1, docCard.DocLobbies.Select(s => s.ID).Distinct().Count(), docLobbyCountAreNotEqual);
-            Assert.AreEqual(docCard.DocLobbies[0].Name, "Федеральный арбитражный суд Северо-Западного округа");
+            Assert.AreEqual(docCard.DocLobbies[0].NameHeader, "Федеральный арбитражный суд Северо-Западного округа");
 
             Assert.IsTrue(docCard.DocDate.HasValue);
             Assert.AreEqual(docCard.DocDate.Value.Date, new DateTime(2014, 07, 07).Date);
@@ -544,7 +547,7 @@ namespace WebArmTests
 
             Assert.IsNotNull(docCard.DocLobbies);
             Assert.AreEqual(1, docCard.DocLobbies.Select(s => s.ID).Distinct().Count(), docLobbyCountAreNotEqual, docLobbyCountAreNotEqual);
-            Assert.AreEqual("Правительство Республики Хакасия", docCard.DocLobbies[0].Name, docLobbiesAreNotEqual);
+            Assert.AreEqual("Правительство Республики Хакасия", docCard.DocLobbies[0].NameHeader, docLobbiesAreNotEqual);
 
             Assert.IsTrue(docCard.DocDate.HasValue, docDateIsNull);
             Assert.AreEqual(new DateTime(2018, 11, 14).Date, docCard.DocDate.Value.Date, docDatesAreNotEqual);

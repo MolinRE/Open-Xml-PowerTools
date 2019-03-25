@@ -185,7 +185,8 @@ namespace HtmlConverter01
                 .Where(p => p.Value.StartsWith("от") && Regex.IsMatch(p.Value, NumberPattern))
                 .SetStyle("text-align", "center");
             
-            wordParagraphs.Take(4).SetStyle("text-align", "center");
+            // Только первые 2 параграфа. 4 - очень много. Максимум - можно 4 попробовать.
+            wordParagraphs.Take(2).SetStyle("text-align", "center");
             #endregion
 
             // 1 - узнаем границы шапки.
@@ -253,7 +254,11 @@ namespace HtmlConverter01
                 var docNumberMatches = Regex.Matches(line, NumberPattern);
                 foreach (Match docNumberMatch in docNumberMatches)
                 {
-                    DocNumbers.AddRange(docNumberMatch.Groups[1].Value.Split(',').Select(s => s.Trim()));
+                    var numbers = docNumberMatch.Groups[1].Value.Split(',')
+                        .Select(s => s.Trim())
+                        .Distinct()
+                        .Where(p => !DocNumbers.Contains(p));
+                    DocNumbers.AddRange(numbers);
                 }
             }
 
@@ -328,6 +333,7 @@ namespace HtmlConverter01
             // Получаем позицию, с которой будем склеивать заголовок
             // Подразумеваем, что это позиция, на которой находится номер документа
             // Т.к. сразу после него идёт название
+
             var docNumberCount = DocNumbers.Count;
             var nameParaStartIndex = 0;
             foreach (var headerPara in headerParagraphsCopy)
@@ -447,24 +453,24 @@ namespace HtmlConverter01
 
             if (paragraphNames.Count > 0)
             {
-                int offset = 0;
-                if (Regex.IsMatch(paragraphNames[0].Value, DatePattern1, RegexOptions.IgnoreCase | RegexOptions.Compiled) ||
-                    Regex.IsMatch(paragraphNames[0].Value, DatePattern2, RegexOptions.IgnoreCase | RegexOptions.Compiled))
-                {
-                    // Надо пересмотреть логику. Названия часто содержат дату. 
-                    // Зачастую название состоит из одного абзаца.
-                    // И часто оно не очень длинное (до 100 символов), так что проверка на количество плохо канает
-                    if (paragraphNames.Count > 1 && paragraphNames.Skip(1).All(p => p.Value.Trim() != ""))
-                    {
-                        offset = 1;
-                    }
+                int offset = 1;
+                //if (Regex.IsMatch(paragraphNames[0].Value, DatePattern1, RegexOptions.IgnoreCase | RegexOptions.Compiled) ||
+                //    Regex.IsMatch(paragraphNames[0].Value, DatePattern2, RegexOptions.IgnoreCase | RegexOptions.Compiled))
+                //{
+                //    // Надо пересмотреть логику. Названия часто содержат дату. 
+                //    // Зачастую название состоит из одного абзаца.
+                //    // И часто оно не очень длинное (до 100 символов), так что проверка на количество плохо канает
+                //    if (paragraphNames.Count > 1 && paragraphNames.Skip(1).All(p => p.Value.Trim() != ""))
+                //    {
+                //        offset = 1;
+                //    }
 
-                    // Если после абзаца в котором был матч идёт пустота - это точно абзац с датой-номером, пропускаем его и следущий
-                    if (paragraphNames.Count > 1 && paragraphNames[1].Value.Trim() == "")
-                    {
-                        offset = 2;
-                    }
-                }
+                //    // Если после абзаца в котором был матч идёт пустота - это точно абзац с датой-номером, пропускаем его и следущий
+                //    if (paragraphNames.Count > 1 && paragraphNames[1].Value.Trim() == "")
+                //    {
+                //        offset = 2;
+                //    }
+                //}
 
                 // Если больше 1 абзаца - пропускаем первый, т.к. это номер с датой
                 docNameParts = paragraphNames
@@ -539,17 +545,16 @@ namespace HtmlConverter01
             }
 
             var header = new XElement("div");
-            var lobbies = DocLobbies.Select(s => s.ID).Distinct().Select(s => DocLobbies.Find(p => p.ID == s)).ToArray();
-            if (lobbies.Length > 1)
+            if (DocLobbies.Count > 1)
             {
                 int i = -1;
-                while (++i < lobbies.Length)
+                while (++i < DocLobbies.Count)
                 {
                     header.Add(new XElement("p",
                         new XAttribute("id", "doclobby"),
                         new XAttribute("class", "header"),
                         new XAttribute("style", "text-align: center"),
-                        new XElement("strong", lobbies[i].NameHeader)));
+                        new XElement("strong", DocLobbies[i].NameHeader)));
 
                     if (DocDate.HasValue && DocNumbers.Any())
                     {
@@ -580,7 +585,7 @@ namespace HtmlConverter01
                             new XAttribute("id", "doclobby"),
                             new XAttribute("class", "header"),
                             new XAttribute("style", "text-align: center"),
-                            new XElement("strong", lobby.Name.ToUpper())));
+                            new XElement("strong", lobby.NameHeader.ToUpper())));
                 }
 
                 foreach (var type in DocTypes)
@@ -880,6 +885,55 @@ namespace HtmlConverter01
         }
 
         /// <summary>
+        /// Извлекает из указанной последовательности элементы, которые составляют подпись документа.
+        /// </summary>
+        /// <param name="wordParagraphs">Последовательность элементов параграфов документа (с конца).</param>
+        /// <returns></returns>
+        private List<XElement> GetSignatureElements(IEnumerable<XElement> wordParagraphs)
+        {
+            var result = new List<XElement>();
+            foreach (var paragraph in wordParagraphs)
+            {
+                if (paragraph.Value.Trim().Length > 0)
+                {
+                    var textAlign = paragraph.GetStyle("text-align") ?? "left";
+                    if (textAlign != "right" && textAlign != "left")
+                    {
+                        break;
+                    }
+
+                    if (result.Count > 0 && textAlign == "left")
+                    {
+                        break;
+                    }
+
+                    if (textAlign == "right")
+                    {
+                        if (result.Any() && paragraph.Descendants().Count() == 1)
+                        {
+                            result.First().AddFirst(paragraph.Elements(), _br);
+                            // Т.к. мы берём внутренности элемента, дальше в цикле мы его уже поймаем - удаляем сразу
+                            paragraph.Remove();
+                        }
+                        else
+                        {
+                            result.Insert(0, paragraph);
+                        }
+                    }
+                }
+                else
+                {
+                    if (result.Any() && result.First().Value.Trim().Length > 0)
+                    {
+                        result.Insert(0, paragraph);
+                    }
+                }
+            }
+
+            return result;
+        }
+
+        /// <summary>
         /// Оформление подписи. Возвращает True если подпись найдена и сформирована
         /// </summary>
         public bool FormatSignature(XElement documentBody)
@@ -903,8 +957,6 @@ namespace HtmlConverter01
                     // Берём все элементы сверху списка, которые по правому краю
                     // Берём, пока не встретится элемент не поправому краю и найдём хотя бы один элемент
 
-                    //beforeSignElem = GetSignatureOffset(i - 1, wordParagraphs, ref offset);
-
                     // Пробуем поймать подпись, которая выровнена по левому краю
                     var previousPararagph = GetPrevious(wordParagraphs, i, true);
                     if (Regex.IsMatch(previousPararagph.Value, SignaturePattern))
@@ -912,28 +964,7 @@ namespace HtmlConverter01
                         previousPararagph.SetStyle("text-align", "right");
                     }
 
-                    var temp = new List<XElement>();
-                    foreach (var paragraph in wordParagraphs.Take(i).Reverse())
-                    {
-                        if (paragraph.Value.Trim().Length > 0)
-                        {
-                            var textAlign = paragraph.GetStyle("text-align") ?? "left";
-                            if (textAlign != "right" && textAlign != "left")
-                            {
-                                break;
-                            }
-
-                            if (temp.Count > 0 && textAlign == "left")
-                            {
-                                break;
-                            }
-
-                            if (textAlign == "right")
-                            {
-                                temp.Insert(0, paragraph);
-                            }
-                        }
-                    }
+                    var temp = GetSignatureElements(wordParagraphs.Take(i).Reverse());
                     signParagraphs.AddRange(temp);
 
                     // У которых идёт подряд text-align=right
@@ -941,50 +972,9 @@ namespace HtmlConverter01
                 else if (i == wordParagraphs.Count - 1)
                 {
                     i++;
-                    //beforeSignElem = GetSignatureOffset(i, wordParagraphs, ref offset);
-                    var temp = new List<XElement>();
-                    foreach (var paragraph in wordParagraphs.Skip(grifIndex).Take(i).Reverse())
-                    {
-                        if (paragraph.Value.Trim().Length > 0)
-                        {
-                            var textAlign = paragraph.GetStyle("text-align") ?? "left";
-                            if (textAlign != "right" && textAlign != "left")
-                            {
-                                break;
-                            }
-
-                            if (temp.Count > 0 && textAlign == "left")
-                            {
-                                break;
-                            }
-
-                            if (textAlign == "right")
-                            {
-                                temp.Insert(0, paragraph);
-                            }
-                        }
-                    }
+                    var temp = GetSignatureElements(wordParagraphs.Skip(grifIndex).Take(i).Reverse());
                     signParagraphs.AddRange(temp);
                 }
-
-                //if (beforeSignElem != null)
-                //{
-                //    var startIndex = wordParagraphs.IndexOf(beforeSignElem) + 1;
-                //    //signParagraphs.AddRange(
-                //    //    wordParagraphs
-                //    //        .Skip(startIndex)
-                //    //        .Take(i - startIndex - (offset-1)));
-                //    foreach (var para in wordParagraphs
-                //            .Skip(startIndex)
-                //            .Take(i - startIndex - (offset - 1)))
-                //    {
-                //        if (!signParagraphs.Contains(para))
-                //        {
-                //            signParagraphs.Add(para);
-                //        }
-                //    }
-                //}
-                // Если доходим до конца, то точно так же
             }
 
             // Сначала проверяем по упрощенному паттерну
@@ -993,60 +983,24 @@ namespace HtmlConverter01
                 return false;
             }
 
-            var signature = new XElement("p", new XAttribute("class", "signature"))
-                .SetStyle("text-align", "right");
-            foreach (var signParagraph in signParagraphs
-                .Distinct()
-                .ToList())
+            // Иногда приезжает пустой параграф
+            if (signParagraphs.First().Value.Trim().Length == 0)
             {
-                foreach (var span in ExtractText(signParagraph)
-                    .Select(s => s.Trim())
-                    .Where(p => p.Length > 0))
+                signParagraphs.Remove(signParagraphs.First());
+            }
+            
+            foreach (var signParagraph in signParagraphs.Distinct().ToList())
+            {
+                var signature = new XElement("p", new XAttribute("class", "signature"));
+                signature.SetStyle("text-align", "right");
+
+                var etext = ExtractText(signParagraph);
+                foreach (var line in etext.Where(p => p.Trim().Length > 0))
                 {
-                    string text = span;
-                    // Здесь уже сперва проверяем на нормальные инициалы
-                    if (Regex.IsMatch(text, SignaturePattern))
-                    {
-                        text = Regex.Replace(text, SignaturePattern, m =>
-                        {
-                            string nameAndMiddleName = m.Groups[1].Value + m.Groups[2].Value;
-                            string surname = m.Groups[3].Value;
-                            surname = char.ToUpper(surname[0]) + surname.Substring(1).ToLower();
-
-                            // Соединяем неразрывным пробелом
-                            return nameAndMiddleName + _nbsp + surname;
-                        });
-
-                        signature.Add(new XElement("span", text, _br));
-                        signParagraph.AddAfterSelf(signature);
-
-                        signature = new XElement("p", new XAttribute("class", "signature"))
-                            .SetStyle("text-align", "right");
-                    }
-                    // Затем на упрощенные
-                    else if (Regex.IsMatch(text, SignatureSmallPattern))
-                    {
-                        text = Regex.Replace(text, SignatureSmallPattern, m =>
-                        {
-                            string name = m.Groups[1].Value;
-                            string surname = m.Groups[2].Value;
-                            surname = char.ToUpper(surname[0]) + surname.Substring(1).ToLower();
-
-                            // Соединяем неразрывным пробелом
-                            return name + _nbsp + surname;
-                        });
-
-                        signature.Add(new XElement("span", text, _br));
-                        signParagraph.AddAfterSelf(signature);
-
-                        signature = new XElement("p", new XAttribute("class", "signature"))
-                            .SetStyle("text-align", "right");
-                    }
-                    else
-                    {
-                        signature.Add(new XElement("span", text, _br));
-                    }
+                    string text = FormatNamesInSignature(line);
+                    signature.Add(new XText(text), _br);
                 }
+                signParagraph.AddAfterSelf(signature);
 
                 if (signParagraph.Parent != null)
                 {
@@ -1055,6 +1009,40 @@ namespace HtmlConverter01
             }
 
             return true;
+        }
+
+        public string FormatNamesInSignature(string text)
+        {
+            text = text.Trim();
+            
+            // Здесь уже сперва проверяем на нормальные инициалы
+            if (Regex.IsMatch(text, SignaturePattern))
+            {
+                text = Regex.Replace(text, SignaturePattern, m =>
+                {
+                    string nameAndMiddleName = m.Groups[1].Value + m.Groups[2].Value;
+                    string surname = m.Groups[3].Value;
+                    surname = char.ToUpper(surname[0]) + surname.Substring(1).ToLower();
+
+                    // Соединяем неразрывным пробелом
+                    return nameAndMiddleName + _nbsp + surname;
+                });
+            }
+            // Затем на упрощенные
+            else if (Regex.IsMatch(text, SignatureSmallPattern))
+            {
+                text = Regex.Replace(text, SignatureSmallPattern, m =>
+                {
+                    string name = m.Groups[1].Value;
+                    string surname = m.Groups[2].Value;
+                    surname = char.ToUpper(surname[0]) + surname.Substring(1).ToLower();
+
+                    // Соединяем неразрывным пробелом
+                    return name + _nbsp + surname;
+                });
+            }
+
+            return text;
         }
 
         /// <summary>
@@ -1196,7 +1184,7 @@ namespace HtmlConverter01
         /// <returns></returns>
         internal List<string> ExtractText(XElement paragraph)
         {
-            var docNameParts = new List<string> {""};
+            var docNameParts = new List<string> { "" };
 
             foreach (var span in paragraph.Descendants()
                 .Where(p => p.Name.LocalName == "span"))
@@ -1224,10 +1212,23 @@ namespace HtmlConverter01
                     docNameParts[docNameParts.Count - 1] += span.Value.Trim();
                 }
 
+                if (docNameParts.Last() != "")
+                {
+                    if ((span.NextNode is XElement) && ((XElement)span.NextNode).Name.LocalName == "br")
+                    {
+                        // Новая строка
+                        docNameParts.Add("");
+                    }
+                }
+            }
+
+            if (docNameParts.Last() == "")
+            {
+                docNameParts.Remove(docNameParts.Last());
             }
 
             return docNameParts;
-        }
+        }        
 
         private bool IsPunctuation(string value)
         {

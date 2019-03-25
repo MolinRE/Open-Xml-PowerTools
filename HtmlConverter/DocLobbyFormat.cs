@@ -1,18 +1,14 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace HtmlConverter01
 {
-    public class DocLobbyFormat
+    public class DocLobbyFormatDto
     {
         /// <summary>
         /// ID.
         /// </summary>
         public int ID { get; set; }
-
-        /// <summary>
-        /// Название.
-        /// </summary>
-        public string Name { get; set; }
 
         /// <summary>
         /// Название в шапке оригинала.
@@ -27,21 +23,43 @@ namespace HtmlConverter01
         /// <summary>
         /// Название в шапку
         /// </summary>
-        public string NameHeader
-        {
-            get { return Name.ToUpper(); }
-        }
+        public string NameHeader { get; set; }
 
-        /// <summary>
-        /// Относится к судебке
-        /// </summary>
-        public bool IsArbitr { get; set; }
-
-        public int RegionID { get; set; }
+        public int? RegionID { get; set; }
 
         public override string ToString()
         {
-            return Name + " (" + ID + ")";
+            return NameHeader + " (" + ID + ")";
+        }
+    }
+
+    public class DocLobbyFormat
+    {
+        /// <summary>
+        /// ID.
+        /// </summary>
+        public int ID { get; set; }
+
+        /// <summary>
+        /// Название в шапке оригинала.
+        /// </summary>
+        public string NameHeaderOriginal { get; set; }
+
+        /// <summary>
+        /// Название в карточку (DocName)
+        /// </summary>
+        public string NameToCard { get; set; }
+
+        /// <summary>
+        /// Название в шапку
+        /// </summary>
+        public string NameHeader { get; set; }
+
+        public List<int?> RegionsIds { get; set; }
+
+        public override string ToString()
+        {
+            return NameHeader + " (" + ID + ")";
         }
     }
 

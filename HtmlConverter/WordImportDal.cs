@@ -9,7 +9,7 @@ using System.Data;
 
 namespace HtmlConverter01
 {
-    class WordImportDal
+    public class WordImportDal
     {
         private static readonly string prodServerName = "srv25";
         private static readonly string devServerName = "srv12";
@@ -40,6 +40,29 @@ namespace HtmlConverter01
             }
         }
 
+        public static List<DocLobbyFormatDto> Lobbies { get; set; }
+
+        public static List<DocLobbyFormatDto> GetAllLobbies()
+        {
+            using (var conn = new SqlConnection(ConnectionString))
+            {
+                var sql = @"
+SELECT dl.LobbyID as ID
+, dl.LobbyNameFull as NameHeaderOriginal
+, ISNULL(dl.LobbyNameRToDocName, dl.LobbyNameFull) as NameToCard
+, dl.LobbyNameFull as NameHeader
+, dl.LobbyNameFull as [Name]
+, rll.RegionID
+FROM dbo.DocLobby dl
+LEFT JOIN dbo.RegionLobbyLnk rll
+	ON rll.LobbyID = dl.LobbyID";
+
+                var result = conn.Query<DocLobbyFormatDto>(sql);
+
+                return result.ToList();
+            }
+        }
+
         /// <summary>
         /// Получает список органов по переданному тексту
         /// </summary>
@@ -49,12 +72,39 @@ namespace HtmlConverter01
         {
             using (var conn = new SqlConnection(ConnectionString))
             {
-                var result = conn.Query<DocLobbyFormat>("webarm.WordImport_GetLobbyByText", 
-                    new
+                List<DocLobbyFormatDto> lobbies = null;
+                if (Lobbies != null)
+                {
+                    lobbies = Lobbies.Where(p => SearchLobbyPredicate(p, pText)).ToList();
+                }
+                else
+                {
+                    lobbies = conn.Query<DocLobbyFormatDto>("webarm.WordImport_GetLobbyByText",
+                        new
+                        {
+                            lobbyName = new DbString() { Value = pText, IsFixedLength = false, Length = 256, IsAnsi = true }
+                        },
+                        commandType: CommandType.StoredProcedure).ToList();
+                }
+
+                var result = new List<DocLobbyFormat>();
+                foreach (var lobby in lobbies)
+                {
+                    var item = result.FirstOrDefault(p => p.ID == lobby.ID);
+                    if (item == null)
                     {
-                        lobbyName = new DbString() { Value = pText, IsFixedLength = false, Length = 256, IsAnsi = true }
-                    },
-                    commandType: CommandType.StoredProcedure);
+                        item = new DocLobbyFormat();
+                        item.ID = lobby.ID;
+                        item.NameHeader = lobby.NameHeader;
+                        item.NameHeaderOriginal = lobby.NameHeaderOriginal;
+                        item.NameToCard = lobby.NameToCard;
+
+                        item.RegionsIds = new List<int?>();
+                        result.Add(item);
+                    }
+
+                    item.RegionsIds.Add(lobby.RegionID);
+                }
 
                 //if (!result.Any())
                 //{
@@ -69,6 +119,13 @@ namespace HtmlConverter01
 
                 return result.ToList();
             }
+        }
+
+        public static bool SearchLobbyPredicate(DocLobbyFormatDto lobby, string text)
+        {
+            return lobby.NameHeader.Equals(text, StringComparison.InvariantCultureIgnoreCase)
+                || lobby.NameHeader.Equals(text.ToUpper().Replace("РОССИЙСКОЙ ФЕДЕРАЦИИ", "РФ"), StringComparison.InvariantCultureIgnoreCase)
+                || lobby.NameHeader.Equals(text + " РФ", StringComparison.InvariantCultureIgnoreCase);
         }
 
         /// <summary>

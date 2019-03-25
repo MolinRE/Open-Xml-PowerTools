@@ -52,6 +52,7 @@ namespace HtmlConverter01
 
     class HtmlConverterHelper
     {
+        static char charToSkip = (char)0;
         static List<char> trim = new List<char> { ' ', '\n' };
         // выбрасываем инлайн теги (очистка текста от стилей)
         static List<string> styleTags = new List<string>() { "span", "strong", "em", "u", "s", "sub", "sup", "font", "hr", "i", "b" };
@@ -65,6 +66,9 @@ namespace HtmlConverter01
             //ConsoleHelpers.ImportFromCsv("E:\\lobby.csv");
             //ParseBuffer("document.html");
             var picDirPath = @"C:\Users\k.komarov\source\example\bugs";
+
+            // Настраиваем кэш лобби, чтобы не лезть в базу
+            WordImportDal.Lobbies = WordImportDal.GetAllLobbies();
 
             foreach (var file in Directory.GetFiles(picDirPath, "*" + ".docx"))
             {
@@ -147,10 +151,13 @@ namespace HtmlConverter01
 
                     ConsoleHelpers.PostProcessAndSave(destFileName, htmlElement);
                     Console.WriteLine();
-                    ConsoleHelpers.ConvertOriginalAndSave(wDoc, destFileName, settings);
+                    //ConsoleHelpers.ConvertOriginalAndSave(wDoc, destFileName, settings);
 
-                    Console.WriteLine("Нажмите любую клавишу");
-                    Console.ReadKey();
+                    if (charToSkip != 's')
+                    {
+                        Console.WriteLine("Нажмите любую клавишу (s = перестать спрашивать)");
+                        charToSkip = Console.ReadKey().KeyChar;
+                    }
                 }
             }
         }

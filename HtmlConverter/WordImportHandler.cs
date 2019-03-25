@@ -18,7 +18,7 @@ namespace HtmlConverter01
             Console.WriteLine("Поиск органов в базе " + WordImportDal.DataSource + ":");
             int count = 1;
             var result = new List<DocLobbyFormat>();
-            foreach (var text in paragraphs)
+            foreach (var text in paragraphs.Where(p1 => p1.Length > 3 && !p1.All(p2 => char.IsDigit(p2) || p2 == '.')))
             {
                 var dbLobby = WordImportDal.GetListLobbyByText(text);
                 result.AddRange(dbLobby);
