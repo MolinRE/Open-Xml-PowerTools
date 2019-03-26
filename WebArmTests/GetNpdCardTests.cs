@@ -28,8 +28,8 @@ namespace WebArmTests
         const string docCaseNumberIsNotEmpty = "Номер дела не пустой";
         const string docCaseNumbersAreNotEqual = "Номер дела не совпадает";
 
-        const string docTypesCountAreNotEqual = "";
-        const string docTypesAreNotEqual = "";
+        const string docTypesCountAreNotEqual = "Количество типов документа не совпадает";
+        const string docTypesAreNotEqual = "Тип документа не совпадает";
 
         const string docVersionDateIsNull = "Дата редакции пустая";
         const string docVersionDateIsNotNull = "Дата редакции не пустая";
@@ -41,10 +41,15 @@ namespace WebArmTests
         const string regNumbersAreNotEqual = "Регистрационный № документа не совпадает";
         const string regNumberIsNotEmpty = "Регистрационный № документа содержит текст";
 
+        const string documentsDirectory = @"C:\Users\k.komarov\source\ad\MolinRE_Open-Xml-PowerTools\WebArmTests\SampleDocuments";
+
         private static GetNpdDocCard ConvertToHtml(string fileName)
         {
             // Настраиваем кэш лобби, чтобы не лезть в базу
-            WordImportDal.Lobbies = WordImportDal.GetAllLobbies();
+            if (WordImportDal.Lobbies == null)
+            {
+                WordImportDal.Lobbies = WordImportDal.GetAllLobbies();
+            }
 
             var fi = new FileInfo(fileName);
             Console.WriteLine(fi.Name);
@@ -110,8 +115,6 @@ namespace WebArmTests
             return imageElement;
         }
 
-        const string documentsDirectory = @"C:\Users\k.komarov\source\ad\MolinRE_Open-Xml-PowerTools\WebArmTests\SampleDocuments";
-
         [TestMethod]
         public void GetCardForStandard()
         {
@@ -150,7 +153,7 @@ namespace WebArmTests
         }
 
         [TestMethod]
-        public void GetCardForExample1()
+        public void GetCardForExample01()
         {
             string fileName = Path.Combine(documentsDirectory, "пример1 приказ ФНС.docx");
             var docCard = ConvertToHtml(fileName);
@@ -187,7 +190,7 @@ namespace WebArmTests
         }
 
         [TestMethod]
-        public void GetCardForExample2()
+        public void GetCardForExample02()
         {
             string fileName = Path.Combine(documentsDirectory, "пример2 приказ ФНС неск изм.docx");
             var docCard = ConvertToHtml(fileName);
@@ -224,7 +227,7 @@ namespace WebArmTests
         }
 
         [TestMethod]
-        public void GetCardForExample3()
+        public void GetCardForExample03()
         {
             string fileName = Path.Combine(documentsDirectory, "пример3 два органа два номера.docx");
             var docCard = ConvertToHtml(fileName);
@@ -261,7 +264,7 @@ namespace WebArmTests
         }
 
         [TestMethod]
-        public void GetCardForExample4()
+        public void GetCardForExample04()
         {
             string fileName = Path.Combine(documentsDirectory, "пример4 три органа три номера.docx");
             var docCard = ConvertToHtml(fileName);
@@ -300,7 +303,7 @@ namespace WebArmTests
         }
 
         [TestMethod]
-        public void GetCardForExample5()
+        public void GetCardForExample05()
         {
             string fileName = Path.Combine(documentsDirectory, "пример5 суд с делом.docx");
             var docCard = ConvertToHtml(fileName);
@@ -332,7 +335,7 @@ namespace WebArmTests
         }
 
         [TestMethod]
-        public void GetCardForExample6()
+        public void GetCardForExample06()
         {
             string fileName = Path.Combine(documentsDirectory, "пример6 без названия.docx");
             var docCard = ConvertToHtml(fileName);
@@ -364,9 +367,9 @@ namespace WebArmTests
         }
 
         [TestMethod]
-        public void GetCardForExample7a()
+        public void GetCardForExample07a()
         {
-            string fileName = Path.Combine(documentsDirectory, "пример7 - разные изменяющие1.docx");
+            string fileName = Path.Combine(documentsDirectory, "пример 7a - разные изменяющие 1.docx");
             var docCard = ConvertToHtml(fileName);
 
             Assert.AreEqual(docCard.DocName, "Об утверждении формы и формата заявления о применении налоговой " +
@@ -401,9 +404,9 @@ namespace WebArmTests
         }
 
         [TestMethod]
-        public void GetCardForExample7b()
+        public void GetCardForExample07b()
         {
-            string fileName = Path.Combine(documentsDirectory, "пример7 - разные изменяющие2.docx");
+            string fileName = Path.Combine(documentsDirectory, "пример 7b - разные изменяющие 2.docx");
             var docCard = ConvertToHtml(fileName);
 
             Assert.AreEqual(docCard.DocName, "Об утверждении формы и формата заявления о применении налоговой " +
@@ -438,9 +441,9 @@ namespace WebArmTests
         }
 
         [TestMethod]
-        public void GetCardForExample7c()
+        public void GetCardForExample07c()
         {
-            string fileName = Path.Combine(documentsDirectory, "пример7 суд без дела.docx");
+            string fileName = Path.Combine(documentsDirectory, "пример 7c - суд без дела.docx");
             var docCard = ConvertToHtml(fileName);
 
             Assert.AreEqual(docCard.DocName, string.Empty, docNameIsNotEmpty);
@@ -470,7 +473,7 @@ namespace WebArmTests
         }
 
         [TestMethod]
-        public void GetCardForExample8a()
+        public void GetCardForExample08a()
         {
             string fileName = Path.Combine(documentsDirectory, "пример 8 - АПЕЛЛЯЦИЯ.docx");
             var docCard = ConvertToHtml(fileName);
@@ -502,7 +505,7 @@ namespace WebArmTests
         }
 
         [TestMethod]
-        public void GetCardForExample8b()
+        public void GetCardForExample08b()
         {
             string fileName = Path.Combine(documentsDirectory, "пример 8 - КАССАЦИЯ.docx");
             var docCard = ConvertToHtml(fileName);
@@ -534,7 +537,7 @@ namespace WebArmTests
         }
 
         [TestMethod]
-        public void GetCardForExample9()
+        public void GetCardForExample09()
         {
             string fileName = Path.Combine(documentsDirectory, "пример9 АОФР изменяющий hak_537.docx");
             var docCard = ConvertToHtml(fileName);
@@ -555,6 +558,73 @@ namespace WebArmTests
             Assert.IsNotNull(docCard.DocNumbers);
             Assert.AreEqual(1, docCard.DocNumbers.Count, docNumbersCountAreNotEqual);
             Assert.AreEqual("537", docCard.DocNumbers[0], docNumbersAreNotEqual);
+
+            Assert.AreEqual(string.Empty, docCard.DocCaseNumber, docCaseNumberIsNotEmpty);
+
+            Assert.IsNotNull(docCard.DocTypes);
+            Assert.AreEqual(1, docCard.DocTypes.Count, docTypesCountAreNotEqual);
+            Assert.AreEqual("ПОСТАНОВЛЕНИЕ", docCard.DocTypes[0].Name, docTypesAreNotEqual);
+
+            Assert.IsFalse(docCard.DocVersionDate.HasValue, docVersionDateIsNotNull);
+
+            Assert.IsFalse(docCard.RegDate.HasValue, regDateIsNotNull);
+
+            Assert.AreEqual(docCard.RegNumber, string.Empty, regNumberIsNotEmpty);
+        }
+
+        [TestMethod]
+        public void GetCardForExample10()
+        {
+            string fileName = Path.Combine(documentsDirectory, "пример 10 - Постановление N 239.docx");
+            var docCard = ConvertToHtml(fileName);
+
+            Assert.AreEqual("О внесении изменений в постановление от 24.12.2014 № 2351 «Об утверждении " +
+                "стоимости гарантированных перечней услуг по погребению на территории муниципального " +
+                "образования г. Белогорск»",
+                docCard.DocName, docNamesAreNotEqual);
+
+            Assert.IsNotNull(docCard.DocLobbies);
+            Assert.AreEqual(1, docCard.DocLobbies.Select(s => s.ID).Distinct().Count(), docLobbyCountAreNotEqual, docLobbyCountAreNotEqual);
+            Assert.AreEqual("Администрация города Белогорск Амурской области", docCard.DocLobbies[0].NameHeader, docLobbiesAreNotEqual);
+
+            Assert.IsTrue(docCard.DocDate.HasValue, docDateIsNull);
+            Assert.AreEqual(new DateTime(2019, 02, 21).Date, docCard.DocDate.Value.Date, docDatesAreNotEqual);
+
+            Assert.IsNotNull(docCard.DocNumbers);
+            Assert.AreEqual(1, docCard.DocNumbers.Count, docNumbersCountAreNotEqual);
+            Assert.AreEqual("239", docCard.DocNumbers[0], docNumbersAreNotEqual);
+
+            Assert.AreEqual(string.Empty, docCard.DocCaseNumber, docCaseNumberIsNotEmpty);
+
+            Assert.IsNotNull(docCard.DocTypes);
+            Assert.AreEqual(1, docCard.DocTypes.Count, docTypesCountAreNotEqual);
+            Assert.AreEqual("ПОСТАНОВЛЕНИЕ", docCard.DocTypes[0].Name, docTypesAreNotEqual);
+
+            Assert.IsFalse(docCard.DocVersionDate.HasValue, docVersionDateIsNotNull);
+
+            Assert.IsFalse(docCard.RegDate.HasValue, regDateIsNotNull);
+
+            Assert.AreEqual(docCard.RegNumber, string.Empty, regNumberIsNotEmpty);
+        }
+
+        [TestMethod]
+        public void GetCardForExample11()
+        {
+            string fileName = Path.Combine(documentsDirectory, "пример 11 - судебка без названия.docx");
+            var docCard = ConvertToHtml(fileName);
+
+            Assert.AreEqual(docCard.DocName, string.Empty, docNameIsNotEmpty);
+
+            Assert.IsNotNull(docCard.DocLobbies);
+            Assert.AreEqual(1, docCard.DocLobbies.Select(s => s.ID).Distinct().Count(), docLobbyCountAreNotEqual, docLobbyCountAreNotEqual);
+            Assert.AreEqual("Арбитражный суд Восточно-Сибирского округа", docCard.DocLobbies[0].NameHeader, docLobbiesAreNotEqual);
+
+            Assert.IsTrue(docCard.DocDate.HasValue, docDateIsNull);
+            Assert.AreEqual(new DateTime(2019, 3, 6).Date, docCard.DocDate.Value.Date, docDatesAreNotEqual);
+
+            Assert.IsNotNull(docCard.DocNumbers);
+            Assert.AreEqual(1, docCard.DocNumbers.Count, docNumbersCountAreNotEqual);
+            Assert.AreEqual("А33-26077/2017", docCard.DocNumbers[0], docNumbersAreNotEqual);
 
             Assert.AreEqual(string.Empty, docCard.DocCaseNumber, docCaseNumberIsNotEmpty);
 

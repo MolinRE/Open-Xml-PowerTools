@@ -232,28 +232,25 @@ namespace HtmlConverter
             var headerParagraphsCopy = headerParagraphs.ToList();
             // текст абзацев
             var headerParagraphsTexts = headerParagraphsCopy.Select(s => s.Value.Trim().TrimNewLine()).ToList();
+            var fullHeaderString = new StringBuilder(string.Join(" ", headerParagraphsTexts));
 
-            var fullStringHeader = new StringBuilder();
-            headerParagraphsTexts.ForEach(headerParagraphText => fullStringHeader.Append(headerParagraphText.Trim() + " "));
-
-            #region 2 - определяем атрибуты
-            // номер, дата, тип и орган
-
+            #region 2 - определяем атрибуты (номер, дата, тип и орган)
             // 2.1 - дата
             DateTime date;
-            if (TryMatchDate(fullStringHeader.ToString(), DatePattern1, out date))
+            if (TryMatchDate(fullHeaderString.ToString(), DatePattern1, out date))
             {
                 DocDate = date;
             }
-            if (DocDate == null && TryMatchDate(fullStringHeader.ToString(), DatePattern2, out date))
+            if (DocDate == null && TryMatchDate(fullHeaderString.ToString(), DatePattern2, out date))
             {
                 DocDate = date;
             }
 
+            XElement numberParagraph = null;
             // 2.2 - номер
-            foreach (var line in headerParagraphsTexts)
+            for (int i = 0; i < headerParagraphsTexts.Count; i++)
             {
-                var docNumberMatches = Regex.Matches(line, NumberPattern);
+                var docNumberMatches = Regex.Matches(headerParagraphsTexts[i], NumberPattern);
                 foreach (Match docNumberMatch in docNumberMatches)
                 {
                     var numbers = docNumberMatch.Groups[1].Value.Split(',')
@@ -261,11 +258,16 @@ namespace HtmlConverter
                         .Distinct()
                         .Where(p => !DocNumbers.Contains(p));
                     DocNumbers.AddRange(numbers);
+
+                    if (numberParagraph == null)
+                    {
+                        numberParagraph = headerParagraphsCopy[i];
+                    }
                 }
             }
 
             // Немного изменил оригинальную логику. Сначала находим все номера
-            string docCaseNumber = Regex.Match(fullStringHeader.ToString(), "Дело\\s*" + NumberPattern).Groups[1].Value;
+            string docCaseNumber = Regex.Match(fullHeaderString.ToString(), "Дело\\s*" + NumberPattern).Groups[1].Value;
             if (DocNumbers.Contains(docCaseNumber))
             {
                 // А затем записываем номер дела, если он он был найден и удаляем его из массива дел
@@ -335,7 +337,6 @@ namespace HtmlConverter
             // Получаем позицию, с которой будем склеивать заголовок
             // Подразумеваем, что это позиция, на которой находится номер документа
             // Т.к. сразу после него идёт название
-
             var docNumberCount = DocNumbers.Count;
             var nameParaStartIndex = 0;
             foreach (var headerPara in headerParagraphsCopy)
@@ -455,7 +456,23 @@ namespace HtmlConverter
 
             if (paragraphNames.Count > 0)
             {
+                // Если больше 1 абзаца - пропускаем первый, т.к. это номер с датой
+                //int offset = paragraphNames.Count == 1 ? 0 : 1;
                 int offset = 1;
+                if (paragraphNames.Count == 1)
+                {
+                    // Если это та же строчка, из которой мы распарсили номер - это номер
+                    if (numberParagraph != null && paragraphNames[0] == numberParagraph)
+                    {
+                        offset = 1;
+                    }
+                    else
+                    {
+                        offset = 0;
+                    }
+                }
+
+                    //1;
                 //if (Regex.IsMatch(paragraphNames[0].Value, DatePattern1, RegexOptions.IgnoreCase | RegexOptions.Compiled) ||
                 //    Regex.IsMatch(paragraphNames[0].Value, DatePattern2, RegexOptions.IgnoreCase | RegexOptions.Compiled))
                 //{
@@ -474,7 +491,6 @@ namespace HtmlConverter
                 //    }
                 //}
 
-                // Если больше 1 абзаца - пропускаем первый, т.к. это номер с датой
                 docNameParts = paragraphNames
                     .Skip(offset)
                     .SelectMany(ExtractText)
