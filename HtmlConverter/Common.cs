@@ -1,10 +1,7 @@
 ﻿using HtmlAgilityPack;
 using System;
-using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Xml.Linq;
 
 namespace HtmlConverter01
@@ -29,7 +26,7 @@ namespace HtmlConverter01
             return html;
         }
 
-        private static XElement XParse(HtmlNode node)
+        private static XNode XParse(HtmlNode node)
         {
             try
             {
@@ -66,6 +63,21 @@ namespace HtmlConverter01
                 string content = node.OuterHtml;
                 content = content
                     .Replace("&nbsp;", " ");
+                if (node.NodeType == HtmlNodeType.Text)
+                {
+                    if (content.Trim().Length > 0)
+                    {
+                        return new XText(content);
+                    }
+
+                    return null;
+                }
+
+                // Если приходит не закрытый 
+                if (content.IndexOf('/') == -1)
+                {
+                    content = content.Insert(content.IndexOf('>'), "/");
+                }
 
                 var result = XElement.Parse(content);
                 result.DescendantsAndSelf().Attributes().Where(p => p.Name.LocalName.ToLower().StartsWith("mso")).Remove();
@@ -74,10 +86,12 @@ namespace HtmlConverter01
             }
             catch (Exception ex)
             {
+                var previous = Console.ForegroundColor;
+                Console.ForegroundColor = ConsoleColor.Red;
                 Console.WriteLine(ex.Message);
+                Console.ForegroundColor = previous;
                 return new XElement("error", new XAttribute("type", ex.GetType().Name), ex.Message);
             }
-
         }
     }
 }
