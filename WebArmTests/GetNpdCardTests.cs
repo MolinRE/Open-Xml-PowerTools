@@ -3,7 +3,7 @@ using System.IO;
 using System.Linq;
 using System.Xml.Linq;
 using DocumentFormat.OpenXml.Packaging;
-using HtmlConverter01;
+using HtmlConverter;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenXmlPowerTools;
 
@@ -64,7 +64,7 @@ namespace WebArmTests
                         pageTitle = (string)part.GetXDocument().Descendants(DC.title).FirstOrDefault() ?? fi.FullName;
                     }
 
-                    var settings = new HtmlConverterSettings()
+                    var settings = new WmlToHtmlConverterSettings()
                     {
                         AdditionalCss = "body { margin: 1cm auto; max-width: 20cm; padding: 0; }",
                         PageTitle = pageTitle,
@@ -75,7 +75,7 @@ namespace WebArmTests
                         ImageHandler = imageInfo => ImageHandler(imageInfo, ref imageCounter)
                     };
 
-                    XElement htmlElement = HtmlConverter01.ConsoleHelpers.GetXElement(wDoc, settings, "Конвертация docx -> html...\r\nОбработка контента...");
+                    XElement htmlElement = ConsoleHelpers.GetXElement(wDoc, settings, "Конвертация docx -> html...\r\nОбработка контента...");
 
                     var getCard = new GetNpdDocCard();
                     var body = htmlElement

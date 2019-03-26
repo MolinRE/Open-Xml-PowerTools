@@ -9,19 +9,18 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
-namespace HtmlConverter01
+namespace HtmlConverter
 {
     public class ConsoleHelpers
     {
-        public static XElement GetXElement(WordprocessingDocument wDoc, HtmlConverterSettings settings, string msg)
+        public static XElement GetXElement(WordprocessingDocument wDoc, WmlToHtmlConverterSettings settings, string msg)
         {
             Console.Write(msg);
             var stopwatch = new Stopwatch();
             stopwatch.Start();
-            XElement htmlElement = HtmlConverter.ConvertToHtml(wDoc, settings);
+            XElement htmlElement = WmlToHtmlConverter.ConvertToHtml(wDoc, settings);
             stopwatch.Stop();
             Console.WriteLine(" ({0:0,0} мс.)", stopwatch.ElapsedMilliseconds);
-            
 
             return htmlElement;
         }
@@ -31,14 +30,15 @@ namespace HtmlConverter01
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 
-            if (doc.Descendants(HtmlConverterHelper.XN("img")).Any())
+            if (doc.Descendants(TransformHtmlCommon.XN("img")).Any())
             {
                 Console.WriteLine();
             }
 
             Console.Write("Пост-обработка...");
             stopwatch.Restart();
-            var bodyDiv = HtmlConverterHelper.PostProcessDocument(doc);
+            TransformHtmlCommon converter = new TransformHtmlCommon();
+            var bodyDiv = converter.PostProcessDocument(doc);
             stopwatch.Stop();
             Console.WriteLine(" ({0} мс.)", stopwatch.ElapsedMilliseconds);
             var bodyString = bodyDiv.ToString(SaveOptions.OmitDuplicateNamespaces);
@@ -57,7 +57,7 @@ namespace HtmlConverter01
             Console.WriteLine("Документ \"{0}\" сохранен.", destFileName.Name);
         }
 
-        internal static void ConvertOriginalAndSave(WordprocessingDocument wDoc, FileInfo destFileName, HtmlConverterSettings settings)
+        internal static void ConvertOriginalAndSave(WordprocessingDocument wDoc, FileInfo destFileName, WmlToHtmlConverterSettings settings)
         {
             // Produce HTML document with<!DOCTYPE html > declaration to tell the browser
             // we are using HTML5.

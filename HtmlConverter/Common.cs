@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Xml.Linq;
 
-namespace HtmlConverter01
+namespace HtmlConverter
 {
     public class Common
     {

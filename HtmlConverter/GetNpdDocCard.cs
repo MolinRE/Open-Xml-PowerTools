@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 
-namespace HtmlConverter01
+namespace HtmlConverter
 {
     public class GetNpdDocCard
     {
@@ -24,7 +24,7 @@ namespace HtmlConverter01
         /// <summary>
         /// Паттерн для поиска дат вида "от dd.MM.yyyy"
         /// </summary>
-        private const string DatePattern2 = @"(от)?\s*(?'date'\d{1,2}\.\d{1,2}\.\d{2,4})";
+        private const string DatePattern2 = @"(от)?\s*(?'date'\d{1,2}\.\d{1,2}\.\d{4})";
         /// <summary>
         /// Паттерн для поиска номеров документа.
         /// </summary>
@@ -141,6 +141,8 @@ namespace HtmlConverter01
                 return;
             }
 
+            DeleteWarmCardTable(documentBody);
+
             // Получаем всех потомков - т.к. параграфы могут быть вложены в таблицу
             var wordParagraphs = documentBody
                 .Descendants()
@@ -184,7 +186,7 @@ namespace HtmlConverter01
                 .Take(10)
                 .Where(p => p.Value.StartsWith("от") && Regex.IsMatch(p.Value, NumberPattern))
                 .SetStyle("text-align", "center");
-            
+
             // Только первые 2 параграфа. 4 - очень много. Максимум - можно 4 попробовать.
             wordParagraphs.Take(2).SetStyle("text-align", "center");
             #endregion
@@ -193,7 +195,7 @@ namespace HtmlConverter01
             // проверяем на наличие таблицы с датой
             var firstTable = documentBody.Descendants().FirstOrDefault(X.Table);
 
-            var temp = wordParagraphs.Select(s => new {Style = s.GetStyle("text-align"), s.Value}).ToList();
+            var temp = wordParagraphs.Select(s => new { Style = s.GetStyle("text-align"), s.Value }).ToList();
 
             // Получаем параграфы вводной части
             // Берём до абзаца "Принят" - это подпись к закону
@@ -387,7 +389,7 @@ namespace HtmlConverter01
                 if (text.Trim() == "")
                 {
                     offset = 1;
-                    text = headerParagraphsTexts[nameParaStartIndex+1];
+                    text = headerParagraphsTexts[nameParaStartIndex + 1];
                 }
 
                 if (text.Equals(region.RegionName, StringComparison.CurrentCultureIgnoreCase) || text.Equals(region.RegionNameForDoc, StringComparison.CurrentCultureIgnoreCase))
@@ -535,6 +537,19 @@ namespace HtmlConverter01
 
             HasAutoCard = true;
             ConsoleHelpers.PrintCard(this);
+        }
+
+        private static void DeleteWarmCardTable(XElement documentBody)
+        {
+            var tableElement = documentBody.Descendants().FirstOrDefault(p => p.Name.LocalName == "table");
+            if (tableElement != null)
+            {
+                var firstCell = tableElement.Descendants().FirstOrDefault(p => p.Name.LocalName == "td");
+                if (firstCell != null && firstCell.Value == "Модуль")
+                {
+                    tableElement.Parent.Remove();
+                }
+            }
         }
 
         private XElement GenerateHeader(IEnumerable<string> docNameParts)
@@ -734,7 +749,7 @@ namespace HtmlConverter01
             if (textAlign == "left")
             {
                 return IsWithinTable(paragprah, table);
-                return false;
+                //return false;
             }
 
             // Иногда заголовки бывают по ширине
@@ -1104,21 +1119,7 @@ namespace HtmlConverter01
                     break;
                 }
             }
-
-            //int count = 0;
-            //foreach (var elem in paragraphs.Skip(count))
-            //{
-            //    if (IsGrif(elem))
-            //    {
-
-            //    }
-            //}
-
-            //var grifParagraphs = paragraphs
-            //    .Skip(offset)
-            //    .SkipWhile(p => !IsGrif(p))
-            //    .TakeWhile(p => NextElementHasSameStyle(p))
-            //    .ToList();
+            
             while (grifParagraphs.Any())
             {
                 var grifElem = new XElement("p",
@@ -1129,8 +1130,9 @@ namespace HtmlConverter01
                 {
                     // Приложение может быть уже автоформатировано через шифт-энтер
                     // Тогда внутри elem будуте спаны и <br />&#x200e;
-                    
+
                     // Атрибут lang приезжает из docx при конвертации (но по идее, может и не приехать, кто его знает)
+                    var etext = ExtractText(elem);
                     foreach (var line in ExtractText(elem))
                     {
                         string text = line;
@@ -1248,11 +1250,14 @@ namespace HtmlConverter01
         internal bool IsGrif(XElement paragraph)
         {
             var elem = paragraph;
+            bool center = elem.GetStyle("text-align") == "center";
             // На случай, если оформлено без переноса на новую строку
             if (paragraph.Elements().Any(p => p.Name.LocalName == "span"))
             {
                 elem = paragraph.Elements().First(p => p.Name.LocalName == "span");
             }
+
+            bool bold = elem.GetStyle("font-weight") == "bold";
 
             string text = elem.Value.Trim();
             if (text.Length < 4)
@@ -1262,12 +1267,12 @@ namespace HtmlConverter01
 
             var split = text.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
-            if (split[0] == "Приложение")
+            if (split[0] == "Приложение" && !(center || bold))
             {
                 return true;
             }
 
-            if (split[0] == "Форма")
+            if (split[0] == "Форма" && !(center || bold))
             {
                 return true;
             }

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace HtmlConverter01
+namespace HtmlConverter
 {
     public class DocLobbyFormatDto
     {

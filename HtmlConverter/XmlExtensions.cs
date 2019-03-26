@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 
-namespace HtmlConverter01
+namespace HtmlConverter
 {
     public class XRow : List<XElement>
     {
@@ -100,6 +100,11 @@ namespace HtmlConverter01
                 .Select(s => s.NodeType == XmlNodeType.Text ? s.ToString().Trim() : "\n"));
         }
 
+        public static bool HasChild(this XElement elem, string localName)
+        {
+            return elem.Elements().Any(p => p.Name.LocalName.Equals(localName));
+        }
+
         #region HTML-экстеншены
 
         #region Работа со стилями
@@ -112,7 +117,7 @@ namespace HtmlConverter01
             }
 
             var result = new Dictionary<string, string>();
-            foreach (var styleAttr in style.Value.Split(';'))
+            foreach (var styleAttr in style.Value.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries))
             {
                 var nameValue = styleAttr.Trim().Split(':');
                 result.Add(nameValue[0].Trim(), nameValue[1].Trim());

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace HtmlConverter01
+namespace HtmlConverter
 {
     public class WordImportHandler
     {

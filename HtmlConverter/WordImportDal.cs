@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Dapper;
 using System.Data;
 
-namespace HtmlConverter01
+namespace HtmlConverter
 {
     public class WordImportDal
     {
