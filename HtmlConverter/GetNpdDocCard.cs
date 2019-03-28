@@ -277,14 +277,23 @@ namespace HtmlConverter
                 // Иначе нет гарантии, что все номера документа будут найдены
             }
 
-            // А затем отрезаем мусор, который попал в номера документа, по количеству органов
             // 2.3 - орган
+            // После того как нашли все подстроки, похожие на номера отрезаем мусор
             DocLobbies = WordImportHandler.SearchLobbies(headerParagraphsTexts.Where(p => p.Trim() != ""));
-            if (DocLobbies.Count < DocNumbers.Count && DocLobbies.Any())
+            if (DocLobbies.Count < DocNumbers.Count)
             {
-                DocNumbers.RemoveRange(DocLobbies.Count, DocNumbers.Count - DocLobbies.Count);
+                if (DocLobbies.Any())
+                {
+                    // Случай, когда нашли орган(ы) - отрезаем номера по количеству органов
+                    DocNumbers.RemoveRange(DocLobbies.Count, DocNumbers.Count - DocLobbies.Count);
+                }
+                else if (DocNumbers.Count > 1)
+                {
+                    // Случай, когда не нашли орган - оставляем только один номер
+                    DocNumbers.RemoveRange(1, DocNumbers.Count - 1);
+                }
             }
-
+            
             // 2.4 - тип
             var toFindType = headerParagraphsTexts
                 .Where(p => p.Trim() != "")
@@ -456,11 +465,10 @@ namespace HtmlConverter
 
             if (paragraphNames.Count > 0)
             {
-                // Если больше 1 абзаца - пропускаем первый, т.к. это номер с датой
-                //int offset = paragraphNames.Count == 1 ? 0 : 1;
                 int offset = 1;
                 if (paragraphNames.Count == 1)
                 {
+                    // Если больше 1 абзаца - пропускаем первый, т.к. это номер с датой
                     // Если это та же строчка, из которой мы распарсили номер - это номер
                     if (numberParagraph != null && paragraphNames[0] == numberParagraph)
                     {
@@ -468,28 +476,10 @@ namespace HtmlConverter
                     }
                     else
                     {
+                        // Иначе всё ок
                         offset = 0;
                     }
                 }
-
-                    //1;
-                //if (Regex.IsMatch(paragraphNames[0].Value, DatePattern1, RegexOptions.IgnoreCase | RegexOptions.Compiled) ||
-                //    Regex.IsMatch(paragraphNames[0].Value, DatePattern2, RegexOptions.IgnoreCase | RegexOptions.Compiled))
-                //{
-                //    // Надо пересмотреть логику. Названия часто содержат дату. 
-                //    // Зачастую название состоит из одного абзаца.
-                //    // И часто оно не очень длинное (до 100 символов), так что проверка на количество плохо канает
-                //    if (paragraphNames.Count > 1 && paragraphNames.Skip(1).All(p => p.Value.Trim() != ""))
-                //    {
-                //        offset = 1;
-                //    }
-
-                //    // Если после абзаца в котором был матч идёт пустота - это точно абзац с датой-номером, пропускаем его и следущий
-                //    if (paragraphNames.Count > 1 && paragraphNames[1].Value.Trim() == "")
-                //    {
-                //        offset = 2;
-                //    }
-                //}
 
                 docNameParts = paragraphNames
                     .Skip(offset)
@@ -555,15 +545,23 @@ namespace HtmlConverter
             ConsoleHelpers.PrintCard(this);
         }
 
+        /// <summary>
+        /// Удаляет карточку документа, сформированную старым инструментом автоформатирования.
+        /// </summary>
+        /// <param name="documentBody">Основной элемент.</param>
         private static void DeleteWarmCardTable(XElement documentBody)
         {
             var tableElement = documentBody.Descendants().FirstOrDefault(p => p.Name.LocalName == "table");
             if (tableElement != null)
             {
-                var firstCell = tableElement.Descendants().FirstOrDefault(p => p.Name.LocalName == "td");
-                if (firstCell != null && firstCell.Value == "Модуль")
+                var firstRow = tableElement.Descendants().FirstOrDefault(p => p.Name.LocalName == "tr");
+                if (firstRow != null && firstRow.Descendants().Count(p => p.Name.LocalName == "td") == 3)
                 {
-                    tableElement.Parent.Remove();
+                    var firstCell = tableElement.Descendants().FirstOrDefault(p => p.Name.LocalName == "td");
+                    if (firstCell != null && firstCell.Value == "Модуль")
+                    {
+                        tableElement.Parent.Remove();
+                    }
                 }
             }
         }
