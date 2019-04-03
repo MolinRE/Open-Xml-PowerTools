@@ -10,6 +10,7 @@ http://www.microsoft.com/resources/sharedsource/licensingbasics/publiclicense.ms
 ***************************************************************************/
 
 using System;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Xml.Linq;
@@ -31,7 +32,7 @@ namespace HtmlConverter
             // Настраиваем кэш лобби, чтобы не лезть в базу
             WordImportDal.Lobbies = WordImportDal.GetAllLobbies();
 
-            foreach (var file in Directory.GetFiles(picDirPath, "*" + ".docx"))
+            foreach (var file in Directory.GetFiles(picDirPath, "с делом" + ".docx"))
             {
                 ConvertToHtml(file, picDirPath);
             }

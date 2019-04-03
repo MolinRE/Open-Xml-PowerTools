@@ -266,16 +266,34 @@ namespace HtmlConverter
                 }
             }
 
-            // Немного изменил оригинальную логику. Сначала находим все номера
-            string docCaseNumber = Regex.Match(fullHeaderString.ToString(), "Дело\\s*" + NumberPattern).Groups[1].Value;
-            if (DocNumbers.Contains(docCaseNumber))
+            XElement docCaseNumberParagraph = null;
+            string docCaseNumber;
+            for (int i = 0; i < headerParagraphsTexts.Count; i++)
             {
-                // А затем записываем номер дела, если он он был найден и удаляем его из массива дел
-                this.DocCaseNumber = docCaseNumber;
-                DocNumbers.Remove(docCaseNumber);
+                // Немного изменил оригинальную логику. Сначала находим все номера
+                docCaseNumber = Regex.Match(headerParagraphsTexts[i], "Дело\\s*" + NumberPattern).Groups[1].Value;
+                if (DocNumbers.Contains(docCaseNumber))
+                {
+                    // А затем записываем номер дела, если он он был найден и удаляем его из массива дел
+                    this.DocCaseNumber = docCaseNumber;
+                    DocNumbers.Remove(docCaseNumber);
 
-                // Иначе нет гарантии, что все номера документа будут найдены
+                    // Иначе нет гарантии, что все номера документа будут найдены
+                    docCaseNumberParagraph = headerParagraphsCopy[i];
+                    break;
+                }
             }
+
+            //// Немного изменил оригинальную логику. Сначала находим все номера
+            //docCaseNumber = Regex.Match(fullHeaderString.ToString(), "Дело\\s*" + NumberPattern).Groups[1].Value;
+            //if (DocNumbers.Contains(docCaseNumber))
+            //{
+            //    // А затем записываем номер дела, если он он был найден и удаляем его из массива дел
+            //    this.DocCaseNumber = docCaseNumber;
+            //    DocNumbers.Remove(docCaseNumber);
+
+            //    // Иначе нет гарантии, что все номера документа будут найдены
+            //}
 
             // 2.3 - орган
             // После того как нашли все подстроки, похожие на номера отрезаем мусор
@@ -470,7 +488,8 @@ namespace HtmlConverter
                 {
                     // Если больше 1 абзаца - пропускаем первый, т.к. это номер с датой
                     // Если это та же строчка, из которой мы распарсили номер - это номер
-                    if (numberParagraph != null && paragraphNames[0] == numberParagraph)
+                    if (numberParagraph != null && paragraphNames[0] == numberParagraph ||
+                        docCaseNumberParagraph != null && paragraphNames[0] == docCaseNumberParagraph)
                     {
                         offset = 1;
                     }
@@ -543,27 +562,6 @@ namespace HtmlConverter
 
             HasAutoCard = true;
             ConsoleHelpers.PrintCard(this);
-        }
-
-        /// <summary>
-        /// Удаляет карточку документа, сформированную старым инструментом автоформатирования.
-        /// </summary>
-        /// <param name="documentBody">Основной элемент.</param>
-        private static void DeleteWarmCardTable(XElement documentBody)
-        {
-            var tableElement = documentBody.Descendants().FirstOrDefault(p => p.Name.LocalName == "table");
-            if (tableElement != null)
-            {
-                var firstRow = tableElement.Descendants().FirstOrDefault(p => p.Name.LocalName == "tr");
-                if (firstRow != null && firstRow.Descendants().Count(p => p.Name.LocalName == "td") == 3)
-                {
-                    var firstCell = tableElement.Descendants().FirstOrDefault(p => p.Name.LocalName == "td");
-                    if (firstCell != null && firstCell.Value == "Модуль")
-                    {
-                        tableElement.Parent.Remove();
-                    }
-                }
-            }
         }
 
         private XElement GenerateHeader(IEnumerable<string> docNameParts)
@@ -889,29 +887,6 @@ namespace HtmlConverter
             }
         }
 
-        internal XElement GetPrevious(List<XElement> elems, int index, bool skipEmpty)
-        {
-            if (index == 0)
-            {
-                return null;
-            }
-
-            if (!skipEmpty)
-            {
-                return elems[index - 1];
-            }
-
-            while (index > 0)
-            {
-                index--;
-                if (elems[index] != null && elems[index].Value.Trim() != "")
-                {
-                    break;
-                }
-            }
-
-            return elems[index];
-        }
 
         /// <summary>
         /// Извлекает из указанной последовательности элементы, которые составляют подпись документа.
@@ -1109,90 +1084,6 @@ namespace HtmlConverter
             insertAfter.AddAfterSelf(regParagraph);
         }
 
-        public void FormatGrif(XElement documentBody)
-        {
-            var paragraphs = documentBody.Elements()
-                .Where(X.Paragraph)
-                .SkipWhile(p => p.HasAttribute("class"))
-                .ToList();
-
-            var offset = 0;
-            var grifParagraphs = new List<XElement>();
-            foreach (var elem in paragraphs
-               .Skip(offset)
-               .SkipWhile(p => !IsGrif(p))
-               .ToList())
-            {
-                // Мы нашли, где начинается гриф
-                grifParagraphs.Add(elem);
-                // Берём элементы, пока следущий не будет отличаться по стилю
-                if (!NextElementHasSameStyle(elem) || elem.Elements().Count() > 1)
-                {
-                    // Второе условие - для случаев, когда текст вообще не форматирован
-                    // Пробуем отличить, по признаку, что переход на новый абзац - это другой элемент документа
-                    break;
-                }
-            }
-            
-            while (grifParagraphs.Any())
-            {
-                var grifElem = new XElement("p",
-                    new XAttribute("class", "grif"));
-                grifElem.SetStyle("text-align", "right");
-
-                foreach (var elem in grifParagraphs.Where(p => p.Value.Trim() != ""))
-                {
-                    // Приложение может быть уже автоформатировано через шифт-энтер
-                    // Тогда внутри elem будуте спаны и <br />&#x200e;
-
-                    // Атрибут lang приезжает из docx при конвертации (но по идее, может и не приехать, кто его знает)
-                    var etext = ExtractText(elem);
-                    foreach (var line in ExtractText(elem))
-                    {
-                        string text = line;
-                        DateTime date;
-                        if (TryMatchDate(text, DatePattern1Custom, out date))
-                        {
-                            text = Regex.Replace(text, DatePattern1Custom, date.ToString("от " + DateTemplate + " "));
-                        }
-                        else if (TryMatchDate(text, DatePattern2, out date))
-                        {
-                            text = Regex.Replace(text, DatePattern2, date.ToString("от " + DateTemplate + " "));
-                        }
-
-                        if (Regex.IsMatch(text, NumberPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled))
-                        {
-                            var number = Regex.Match(text, NumberPattern, RegexOptions.Compiled).Groups[1].Value;
-                            text = Regex.Replace(text, NumberPattern, "№ " + number);
-                        }
-
-                        grifElem.Add(new XElement("span", text, _br));
-                    }
-                }
-
-                offset = paragraphs.IndexOf(grifParagraphs.Last()) + 1;
-
-                // Вставляем новый гриф
-                grifParagraphs.Last().AddAfterSelf(grifElem);
-                // Удаляем старый гриф
-                grifParagraphs.Remove();
-
-                grifParagraphs.Clear();
-                foreach (var elem in paragraphs
-                    .Skip(offset)
-                    .SkipWhile(p => !IsGrif(p))
-                    .ToList())
-                {
-                    grifParagraphs.Add(elem);
-                    if (!NextElementHasSameStyle(elem) || elem.Elements().Count() > 1)
-                    {
-                        break;
-                    }
-                }
-
-            } 
-        }
-
         /// <summary>
         /// Достает текст из параграфа таким образом, что каждая строка в параграфе - это элемент массива.
         /// </summary>
@@ -1244,8 +1135,13 @@ namespace HtmlConverter
             }
 
             return docNameParts;
-        }        
+        }
 
+        /// <summary>
+        /// Вовзращает признак, является ли строка символом знака препинания, перед которым не ставится пробел в письме.
+        /// </summary>
+        /// <param name="value">Проверяемая строка.</param>
+        /// <returns></returns>
         private bool IsPunctuation(string value)
         {
             if (value.Trim().Length < 1)
@@ -1259,6 +1155,121 @@ namespace HtmlConverter
                 ch == ':' ||
                 ch == '!' ||
                 ch == '?';
+        }
+
+        /// <summary>
+        /// Получает предыдущий (непустой) элемент в списке
+        /// </summary>
+        /// <param name="elems">Список элементов</param>
+        /// <param name="index">Текущий индекс</param>
+        /// <param name="skipEmpty">Пропускать пустые элементы</param>
+        /// <returns></returns>
+        internal XElement GetPrevious(List<XElement> elems, int index, bool skipEmpty)
+        {
+            if (index == 0)
+            {
+                return null;
+            }
+
+            if (!skipEmpty)
+            {
+                return elems[index - 1];
+            }
+
+            while (index > 0)
+            {
+                index--;
+                if (elems[index] != null && elems[index].Value.Trim() != "")
+                {
+                    break;
+                }
+            }
+
+            return elems[index];
+        }
+
+        public void FormatGrif(XElement documentBody)
+        {
+            var paragraphs = documentBody.Elements()
+                .Where(X.Paragraph)
+                .SkipWhile(p => p.HasAttribute("class"))
+                .ToList();
+
+            var offset = 0;
+            var grifParagraphs = new List<XElement>();
+            foreach (var elem in paragraphs
+               .Skip(offset)
+               .SkipWhile(p => !IsGrif(p))
+               .ToList())
+            {
+                // Мы нашли, где начинается гриф
+                grifParagraphs.Add(elem);
+                // Берём элементы, пока следущий не будет отличаться по стилю
+                if (!NextElementHasSameStyle(elem) || elem.Elements().Count() > 1)
+                {
+                    // Второе условие - для случаев, когда текст вообще не форматирован
+                    // Пробуем отличить, по признаку, что переход на новый абзац - это другой элемент документа
+                    break;
+                }
+            }
+
+            while (grifParagraphs.Any())
+            {
+                var grifElem = new XElement("p", new XAttribute("class", "grif"));
+                grifElem.SetStyle("text-align", "right");
+
+                foreach (var elem in grifParagraphs.Where(p => p.Value.Trim() != ""))
+                {
+                    // Приложение может быть уже автоформатировано через шифт-энтер
+                    // Тогда внутри elem будуте спаны и <br />&#x200e;
+
+                    // Атрибут lang приезжает из docx при конвертации (но по идее, может и не приехать, кто его знает
+                    // так что сделаем дополнительную проверку)
+                    var etext = ExtractText(elem);
+                    foreach (var line in ExtractText(elem))
+                    {
+                        string text = line;
+                        DateTime date;
+                        if (TryMatchDate(text, DatePattern1Custom, out date))
+                        {
+                            text = Regex.Replace(text, DatePattern1Custom, date.ToString("от " + DateTemplate + " "));
+                        }
+                        else if (TryMatchDate(text, DatePattern2, out date))
+                        {
+                            text = Regex.Replace(text, DatePattern2, date.ToString("от " + DateTemplate + " "));
+                        }
+
+                        if (Regex.IsMatch(text, NumberPattern, RegexOptions.IgnoreCase | RegexOptions.Compiled))
+                        {
+                            var number = Regex.Match(text, NumberPattern, RegexOptions.Compiled).Groups[1].Value;
+                            text = Regex.Replace(text, NumberPattern, "№ " + number);
+                        }
+
+                        grifElem.Add(new XElement("span", text, _br));
+                    }
+                }
+
+                offset = paragraphs.IndexOf(grifParagraphs.Last()) + 1;
+
+                // Вставляем новый гриф
+                grifParagraphs.Last().AddAfterSelf(grifElem);
+                // Удаляем старый гриф
+                grifParagraphs.Remove();
+
+                grifParagraphs.Clear();
+                foreach (var elem in paragraphs
+                    .Skip(offset)
+                    .SkipWhile(p => !IsGrif(p))
+                    .ToList())
+                {
+                    grifParagraphs.Add(elem);
+                    if (!NextElementHasSameStyle(elem) || elem.Elements().Count() > 1)
+                    {
+                        break;
+                    }
+                }
+
+            }
         }
 
         internal bool IsGrif(XElement paragraph)
@@ -1348,6 +1359,27 @@ namespace HtmlConverter
 
             dateTime = DateTime.MinValue;
             return false;
+        }
+
+        /// <summary>
+        /// Удаляет карточку документа, сформированную старым инструментом автоформатирования.
+        /// </summary>
+        /// <param name="documentBody">Основной элемент.</param>
+        private static void DeleteWarmCardTable(XElement documentBody)
+        {
+            var tableElement = documentBody.Descendants().FirstOrDefault(p => p.Name.LocalName == "table");
+            if (tableElement != null)
+            {
+                var firstRow = tableElement.Descendants().FirstOrDefault(p => p.Name.LocalName == "tr");
+                if (firstRow != null && firstRow.Descendants().Count(p => p.Name.LocalName == "td") == 3)
+                {
+                    var firstCell = tableElement.Descendants().FirstOrDefault(p => p.Name.LocalName == "td");
+                    if (firstCell != null && firstCell.Value == "Модуль")
+                    {
+                        tableElement.Parent.Remove();
+                    }
+                }
+            }
         }
     }
 }

@@ -30,7 +30,7 @@ namespace HtmlConverter
             var stopwatch = new Stopwatch();
             stopwatch.Start();
 
-            if (doc.Descendants(TransformHtmlCommon.XN("img")).Any())
+            if (doc.Descendants().Where(p => p.Name.LocalName == "img").Any())
             {
                 Console.WriteLine();
             }

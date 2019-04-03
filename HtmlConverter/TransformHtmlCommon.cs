@@ -748,7 +748,7 @@ namespace HtmlConverter
 
         private static XTable BuildTableMap(XElement table)//, int? startRow = null, int? startCell = null, int? endRow = null, int? endCell = null)
         {
-            var tableRows = table.Elements(XN("tr")).ToList();
+            var tableRows = table.Elements().Where(p => p.Name.LocalName == "tr").ToList();
 
             var startRowIndex = 0;
             var startCellIndex = 0;
@@ -780,7 +780,7 @@ namespace HtmlConverter
 
                 for (var colIndex = startCellIndex; colIndex <= (endCellIndex == -1 ? (tableRows[rowIndex].Elements(XN("td")).Count() - 1) : endCellIndex); colIndex++)
                 {
-                    var currentCell = tableRows[rowIndex].Elements(XN("td")).ElementAt(colIndex);
+                    var currentCell = tableRows[rowIndex].Elements().Where(p => p.Name.LocalName == "td").ElementAt(colIndex);
                     Trace.Write(currentCell.Value + "; ");
 
                     if (currentCell == null)
@@ -948,32 +948,32 @@ namespace HtmlConverter
             var result = false;
 
             // h3 - самый популярный
-            if (elem.Name == XN("h3"))
+            if (elem.Name.LocalName == "h3")
             {
                 result = true;
                 headerLevel = 3;
             }
-            else if (elem.Name == XN("h1"))
+            else if (elem.Name.LocalName == "h1")
             {
                 result = true;
                 headerLevel = 1;
             }
-            else if (elem.Name == XN("h2"))
+            else if (elem.Name.LocalName == "h2")
             {
                 result = true;
                 headerLevel = 2;
             }
-            else if (elem.Name == XN("h4"))
+            else if (elem.Name.LocalName == "h4")
             {
                 result = true;
                 headerLevel = 4;
             }
-            else if (elem.Name == XN("h5"))
+            else if (elem.Name.LocalName == "h5")
             {
                 result = true;
                 headerLevel = 5;
             }
-            else if (elem.Name == XN("h6"))
+            else if (elem.Name.LocalName == "h6")
             {
                 result = true;
                 headerLevel = 6;
@@ -986,7 +986,7 @@ namespace HtmlConverter
                     var centered = elem.Attribute("style").Value.Contains("text-align: center");
                     if (centered)
                     {
-                        var span = elem.Element(XN("span"));
+                        var span = elem.Elements().FirstOrDefault(p => p.Name.LocalName =="span");
                         if (span != null && span.Attribute("style") != null)
                         {
                             headerLevel = 0;
@@ -1211,7 +1211,7 @@ namespace HtmlConverter
 
         private static XElement TransformToListItemElement(XElement elem, string listName)
         {
-            var spanElements = elem.Elements(XN("span")).ToArray();
+            var spanElements = elem.Descendants().Where(p => p.Name.LocalName == "span").ToArray();
             XElement result;
             // Если это нумерованный список и нет класса - это п
             if (listName == "ol" && GetListClass(elem) == null)

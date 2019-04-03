@@ -583,9 +583,13 @@ namespace WebArmTests
                 "образования г. Белогорск»",
                 docCard.DocName, docNamesAreNotEqual);
 
-            Assert.IsNotNull(docCard.DocLobbies);
-            Assert.AreEqual(1, docCard.DocLobbies.Select(s => s.ID).Distinct().Count(), docLobbyCountAreNotEqual, docLobbyCountAreNotEqual);
-            Assert.AreEqual("Администрация города Белогорск Амурской области", docCard.DocLobbies[0].NameHeader, docLobbiesAreNotEqual);
+            // Если название лобби в документе написано правильно
+            //Assert.IsNotNull(docCard.DocLobbies);
+            //Assert.AreEqual(1, docCard.DocLobbies.Select(s => s.ID).Distinct().Count(), docLobbyCountAreNotEqual, docLobbyCountAreNotEqual);
+            //Assert.AreEqual("Администрация города Белогорск Амурской области", docCard.DocLobbies[0].NameHeader, docLobbiesAreNotEqual);
+
+            // Если название написано непраивльно
+            Assert.AreEqual(0, docCard.DocLobbies.Count, docLobbyCountAreNotEqual);
 
             Assert.IsTrue(docCard.DocDate.HasValue, docDateIsNull);
             Assert.AreEqual(new DateTime(2019, 02, 21).Date, docCard.DocDate.Value.Date, docDatesAreNotEqual);
