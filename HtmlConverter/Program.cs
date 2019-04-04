@@ -32,7 +32,7 @@ namespace HtmlConverter
             // Настраиваем кэш лобби, чтобы не лезть в базу
             WordImportDal.Lobbies = WordImportDal.GetAllLobbies();
 
-            foreach (var file in Directory.GetFiles(picDirPath, "с делом" + ".docx"))
+            foreach (var file in Directory.GetFiles(picDirPath, "пропал гриф-1" + ".docx"))
             {
                 ConvertToHtml(file, picDirPath);
             }

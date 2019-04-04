@@ -896,7 +896,7 @@ namespace HtmlConverter
         private List<XElement> GetSignatureElements(IEnumerable<XElement> wordParagraphs)
         {
             var result = new List<XElement>();
-            foreach (var paragraph in wordParagraphs)
+            foreach (var paragraph in wordParagraphs.Where(p => !p.HasAttributeValue("class", "grif")))
             {
                 if (paragraph.Value.Trim().Length > 0)
                 {
@@ -1205,7 +1205,7 @@ namespace HtmlConverter
                 // Мы нашли, где начинается гриф
                 grifParagraphs.Add(elem);
                 // Берём элементы, пока следущий не будет отличаться по стилю
-                if (!NextElementHasSameStyle(elem) || elem.Elements().Count() > 1)
+                if (!NextElementHasSameStyle(elem))
                 {
                     // Второе условие - для случаев, когда текст вообще не форматирован
                     // Пробуем отличить, по признаку, что переход на новый абзац - это другой элемент документа
@@ -1213,13 +1213,16 @@ namespace HtmlConverter
                 }
             }
 
+            // Может быть несколько грифов подряд (как минимум 2).
+            var grifElems = new List<XElement>();
             while (grifParagraphs.Any())
             {
-                var grifElem = new XElement("p", new XAttribute("class", "grif"));
-                grifElem.SetStyle("text-align", "right");
-
+                grifElems.Clear();
                 foreach (var elem in grifParagraphs.Where(p => p.Value.Trim() != ""))
                 {
+                    var grifElem = new XElement("p", new XAttribute("class", "grif"));
+                    grifElem.SetStyle("text-align", "right");
+
                     // Приложение может быть уже автоформатировано через шифт-энтер
                     // Тогда внутри elem будуте спаны и <br />&#x200e;
 
@@ -1245,14 +1248,15 @@ namespace HtmlConverter
                             text = Regex.Replace(text, NumberPattern, "№ " + number);
                         }
 
-                        grifElem.Add(new XElement("span", text, _br));
+                        grifElem.Add(new XText(text), _br);
                     }
+                    grifElems.Add(grifElem);
                 }
 
                 offset = paragraphs.IndexOf(grifParagraphs.Last()) + 1;
 
                 // Вставляем новый гриф
-                grifParagraphs.Last().AddAfterSelf(grifElem);
+                grifParagraphs.Last().AddAfterSelf(grifElems);
                 // Удаляем старый гриф
                 grifParagraphs.Remove();
 
@@ -1263,7 +1267,7 @@ namespace HtmlConverter
                     .ToList())
                 {
                     grifParagraphs.Add(elem);
-                    if (!NextElementHasSameStyle(elem) || elem.Elements().Count() > 1)
+                    if (!NextElementHasSameStyle(elem))
                     {
                         break;
                     }
