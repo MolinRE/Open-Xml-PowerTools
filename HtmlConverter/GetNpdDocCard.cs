@@ -1222,20 +1222,10 @@ namespace HtmlConverter
             while (grifParagraphs.Any())
             {
                 grifElems.Clear();
-                // grifParagraphs может состоять из
-
-                // [0] гриф через спаны
-
-                // [1] гриф через параграф
-                // [2] гриф через параграф
-                // [3] гриф через параграф
-
-                // [4] гриф через спаны
-
                 XElement grifElem = null;
-                // Один гриф мог быть разбит на несколько элементов - нужно склеить такие грифы
                 foreach (var elem in grifParagraphs.Where(p => p.Value.Trim() != ""))
                 {
+                    // Один гриф мог быть разбит на несколько элементов - нужно склеить такие грифы
                     if (grifElem == null || elem.Descendants().Count() > 1)
                     {
                         grifElem = new XElement("p", new XAttribute("class", "grif"));
