@@ -896,19 +896,23 @@ namespace HtmlConverter
         private List<XElement> GetSignatureElements(IEnumerable<XElement> wordParagraphs)
         {
             var result = new List<XElement>();
-            foreach (var paragraph in wordParagraphs.Where(p => !p.HasAttributeValue("class", "grif")))
+            var ps = wordParagraphs.Where(p => !p.HasAttributeValue("class", "grif")).ToArray();
+            var psText = ps.Select(s => s.Value).ToArray();
+            foreach (var paragraph in ps)
             {
                 if (paragraph.Value.Trim().Length > 0)
                 {
                     var textAlign = paragraph.GetStyle("text-align") ?? "left";
                     if (textAlign != "right" && textAlign != "left")
                     {
-                        break;
+                        // Это точно не подпись
+                        return result;
                     }
 
                     if (result.Count > 0 && textAlign == "left")
                     {
-                        break;
+                        // Если для подписи уже отобраны элементы, а следущий по левому краю - заканчиваем
+                        return result;
                     }
 
                     if (textAlign == "right")
@@ -955,7 +959,7 @@ namespace HtmlConverter
             for (int i = 0; i < wordParagraphs.Count; i++)
             {
                 // Если встречаем гриф, то берём все предыдущие параграфы,
-                if (wordParagraphs[i].HasClass("grif"))
+                if (wordParagraphs[i].HasClass("grif") && !wordParagraphs[i-1].HasClass("grif"))
                 {
                     grifIndex = i + 1;
                     // Берём все элементы сверху списка, которые по правому краю
@@ -1218,10 +1222,25 @@ namespace HtmlConverter
             while (grifParagraphs.Any())
             {
                 grifElems.Clear();
+                // grifParagraphs может состоять из
+
+                // [0] гриф через спаны
+
+                // [1] гриф через параграф
+                // [2] гриф через параграф
+                // [3] гриф через параграф
+
+                // [4] гриф через спаны
+
+                XElement grifElem = null;
+                // Один гриф мог быть разбит на несколько элементов - нужно склеить такие грифы
                 foreach (var elem in grifParagraphs.Where(p => p.Value.Trim() != ""))
                 {
-                    var grifElem = new XElement("p", new XAttribute("class", "grif"));
-                    grifElem.SetStyle("text-align", "right");
+                    if (grifElem == null || elem.Descendants().Count() > 1)
+                    {
+                        grifElem = new XElement("p", new XAttribute("class", "grif"));
+                        grifElem.SetStyle("text-align", "right");
+                    }
 
                     // Приложение может быть уже автоформатировано через шифт-энтер
                     // Тогда внутри elem будуте спаны и <br />&#x200e;
@@ -1250,7 +1269,11 @@ namespace HtmlConverter
 
                         grifElem.Add(new XText(text), _br);
                     }
-                    grifElems.Add(grifElem);
+
+                    if (!grifElems.Contains(grifElem))
+                    {
+                        grifElems.Add(grifElem);
+                    }
                 }
 
                 offset = paragraphs.IndexOf(grifParagraphs.Last()) + 1;
