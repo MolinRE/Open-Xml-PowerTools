@@ -96,7 +96,6 @@ LEFT JOIN dbo.RegionLobbyLnk rll
                         item = new DocLobbyFormat();
                         item.ID = lobby.ID;
                         item.NameHeader = lobby.NameHeader;
-                        item.NameHeaderOriginal = lobby.NameHeaderOriginal;
                         item.NameToCard = lobby.NameToCard;
 
                         item.RegionsIds = new List<int?>();

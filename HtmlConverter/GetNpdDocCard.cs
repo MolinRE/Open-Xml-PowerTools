@@ -897,8 +897,9 @@ namespace HtmlConverter
         {
             var result = new List<XElement>();
             var ps = wordParagraphs.Where(p => !p.HasAttributeValue("class", "grif")).ToArray();
-            var psText = ps.Select(s => s.Value).ToArray();
-            foreach (var paragraph in ps)
+            foreach (var paragraph in wordParagraphs
+                .Where(p => !p.HasAttributeValue("class", "grif"))
+                .ToArray())
             {
                 if (paragraph.Value.Trim().Length > 0)
                 {
