@@ -13,17 +13,12 @@ namespace HtmlConverter
         /// <summary>
         /// Название в шапке оригинала.
         /// </summary>
-        public string NameHeaderOriginal { get; set; }
+        public string NameHeader { get; set; }
 
         /// <summary>
         /// Название в карточку (DocName)
         /// </summary>
         public string NameToCard { get; set; }
-
-        /// <summary>
-        /// Название в шапку
-        /// </summary>
-        public string NameHeader { get; set; }
 
         public int? RegionID { get; set; }
 
@@ -43,17 +38,12 @@ namespace HtmlConverter
         /// <summary>
         /// Название в шапке оригинала.
         /// </summary>
-        public string NameHeaderOriginal { get; set; }
+        public string NameHeader { get; set; }
 
         /// <summary>
         /// Название в карточку (DocName)
         /// </summary>
         public string NameToCard { get; set; }
-
-        /// <summary>
-        /// Название в шапку
-        /// </summary>
-        public string NameHeader { get; set; }
 
         public List<int?> RegionsIds { get; set; }
 
