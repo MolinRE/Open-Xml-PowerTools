@@ -25,6 +25,7 @@ namespace HtmlConverter
         /// Паттерн для поиска дат вида "от dd.MM.yyyy"
         /// </summary>
         private const string DatePattern2 = @"(от)?\s*(?'date'\d{1,2}\.\d{1,2}\.\d{4})";
+        private const string DatePattern3 = @"(?'date'\d{1,2}\s.+\s\d{4})";
         /// <summary>
         /// Паттерн для поиска номеров документа.
         /// </summary>
@@ -479,6 +480,21 @@ namespace HtmlConverter
                 }
             }
 
+            foreach (var paragraph in paragraphNames)
+            {
+                var index = paragraph.Value.IndexOf("(заголовок с учетом изменений");
+                if (index > -1)
+                {
+                    if (TryMatchDate(paragraph.Value, DatePattern3, out var dt))
+                    {
+                        DocVersionDate = dt;
+                    }
+
+                    paragraph.SetValue(paragraph.Value.Remove(index));
+                    break;
+                }
+            }
+
             string[] docNameParts = null;
 
             if (paragraphNames.Count > 0)
@@ -532,9 +548,15 @@ namespace HtmlConverter
             if (redactionParagraphs.Count == 0)
             {
                 redactionParagraphs = wordParagraphs
-                    .SkipWhile(p => !p.Value.Trim().StartsWith("(в ред", StringComparison.CurrentCultureIgnoreCase))
-                    .TakeWhile(p => p.Value.Trim() != "")
-                    .ToList();
+                   // Пропускаем заголовки - тут уже проверили
+                   .Skip(wordParagraphs.IndexOf(headerParagraphs.Last()))
+                   // Берем абзаца до следущего загловка
+                   .TakeWhile(p => p.GetStyle("text-align") == "center")
+                   // Ищем в них
+                   .SkipWhile(p => !p.Value.Trim().StartsWith("(в ред", StringComparison.CurrentCultureIgnoreCase))
+                   // Если нашли, берем до пустой строчки
+                   .TakeWhile(p => p.Value.Trim() != "")
+                   .ToList();
             }
 
             redactionParagraphs = redactionParagraphs

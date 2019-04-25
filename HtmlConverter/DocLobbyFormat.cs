@@ -5,6 +5,8 @@ namespace HtmlConverter
 {
     public class DocLobbyFormatDto
     {
+        public string lobbyShortNameRNorm;
+
         /// <summary>
         /// ID.
         /// </summary>

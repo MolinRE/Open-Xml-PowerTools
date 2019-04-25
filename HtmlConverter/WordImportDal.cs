@@ -48,10 +48,9 @@ namespace HtmlConverter
             {
                 var sql = @"
 SELECT dl.LobbyID as ID
-, dl.LobbyNameFull as NameHeaderOriginal
-, ISNULL(dl.LobbyNameRToDocName, dl.LobbyNameFull) as NameToCard
 , dl.LobbyNameFull as NameHeader
-, dl.LobbyNameFull as [Name]
+, ISNULL(dl.LobbyNameRToDocName, dl.LobbyNameFull) as NameToCard
+, ISNULL(dl.LobbyShortNameRNorm, '') as [lobbyShortNameRNorm]
 , rll.RegionID
 FROM dbo.DocLobby dl
 LEFT JOIN dbo.RegionLobbyLnk rll
@@ -124,7 +123,8 @@ LEFT JOIN dbo.RegionLobbyLnk rll
         {
             return lobby.NameHeader.Equals(text, StringComparison.InvariantCultureIgnoreCase)
                 || lobby.NameHeader.Equals(text.ToUpper().Replace("РОССИЙСКОЙ ФЕДЕРАЦИИ", "РФ"), StringComparison.InvariantCultureIgnoreCase)
-                || lobby.NameHeader.Equals(text + " РФ", StringComparison.InvariantCultureIgnoreCase);
+                || lobby.NameHeader.Equals(text + " РФ", StringComparison.InvariantCultureIgnoreCase)
+                || lobby.lobbyShortNameRNorm.Equals(text, StringComparison.InvariantCultureIgnoreCase);
         }
 
         /// <summary>
