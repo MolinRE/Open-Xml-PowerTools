@@ -160,12 +160,7 @@ namespace HtmlConverter
                 string parRegText = registrationParagraph.Value;
 
                 // 2.1 - дата
-                DateTime regDate;
-                if (TryMatchDate(parRegText, DatePattern1, out regDate))
-                {
-                    RegDate = regDate;
-                }
-                if (RegDate == null && TryMatchDate(parRegText, DatePattern2, out regDate))
+                if (TryGetAnyMatchedDate(parRegText, out var regDate, DatePattern1, DatePattern2))
                 {
                     RegDate = regDate;
                 }
@@ -237,12 +232,7 @@ namespace HtmlConverter
 
             #region 2 - определяем атрибуты (номер, дата, тип и орган)
             // 2.1 - дата
-            DateTime date;
-            if (TryMatchDate(fullHeaderString.ToString(), DatePattern1, out date))
-            {
-                DocDate = date;
-            }
-            if (DocDate == null && TryMatchDate(fullHeaderString.ToString(), DatePattern2, out date))
+            if (TryGetEarliestMatchedDate(fullHeaderString.ToString(), out DateTime date, DatePattern1, DatePattern2))
             {
                 DocDate = date;
             }
@@ -1380,7 +1370,6 @@ namespace HtmlConverter
         }
 
         /// <summary>
-        /// Защита от опечаток. 
         /// Пробует распознать указанный паттерн даты в указанной строке и в случае успеха, пробует сконвертировать его в объект <see cref="DateTime"/>.
         /// </summary>
         /// <param name="text">Текст для поиска даты.</param>
@@ -1391,12 +1380,68 @@ namespace HtmlConverter
         {
             if (Regex.IsMatch(text, datePattern, RegexOptions.IgnoreCase | RegexOptions.Compiled))
             {
+                // TryParse - защита от опечаток (успешный матч ещё не означает успешный парс).
                 if (DateTime.TryParse(Regex.Match(text, datePattern, RegexOptions.IgnoreCase).Groups["date"].Value, out dateTime))
                 {
                     return true;
                 }
             }
 
+            dateTime = DateTime.MinValue;
+            return false;
+        }
+
+        /// <summary>
+        /// Ищет в тексте совпадение с любым из переданных паттернов даты и пробует сконвертировать его в DateTime.
+        /// </summary>
+        /// <param name="text">Текст для поиска даты.</param>
+        /// <param name="dateTime">Результат преобразования найденного текста в дату.</param>
+        /// <param name="datePattern">Паттерны даты.</param>
+        /// <returns></returns>
+        internal bool TryGetAnyMatchedDate(string text, out DateTime dateTime, params string[] datePatterns)
+        {
+            foreach (var datePattern in datePatterns)
+            {
+                var match = Regex.Match(text, datePattern, RegexOptions.IgnoreCase);
+                // TryParse - защита от опечаток (успешный матч ещё не означает успешный парс).
+                if (match.Success && DateTime.TryParse(match.Groups["date"].Value, out dateTime))
+                {
+                    return true;
+                }
+            }
+
+            dateTime = DateTime.MinValue;
+            return false;
+        }
+
+        /// <summary>
+        /// Ищет в тексте самое раннее совпадение любому из переданных паттернов даты и пробует сконвертировать его в DateTime.
+        /// </summary>
+        /// <param name="text">Текст для поиска даты.</param>
+        /// <param name="dateTime">Результат преобразования найденного текста в дату.</param>
+        /// <param name="datePattern">Паттерны даты.</param>
+        /// <returns></returns>
+        internal bool TryGetEarliestMatchedDate(string text, out DateTime dateTime, params string[] patterns)
+        {
+            Match resultMatch = null;
+            foreach (var datePattern in patterns)
+            {
+                var match = Regex.Match(text, datePattern, RegexOptions.IgnoreCase);
+                if (match.Success)
+                {
+                    if (resultMatch == null || resultMatch.Index > match.Index)
+                    {
+                        resultMatch = match;
+                    }
+                }
+            }
+
+            // TryParse - защита от опечаток (успешный матч ещё не означает успешный парс).
+            if (resultMatch != null && DateTime.TryParse(resultMatch.Groups["date"].Value, out dateTime))
+            {
+                return true;
+            }
+            
             dateTime = DateTime.MinValue;
             return false;
         }
