@@ -460,20 +460,20 @@ namespace HtmlConverter
                 }
 
                 var CLASSES = new Dictionary<string, string>()
-            {
-                { "top", "cell_border_top" },
-                { "left", "cell_border_left" },
-                { "right", "cell_border_right" },
-                { "bottom", "cell_border_bottom" },
-                { "all", "cell_border_all" }
-            };
+                {
+                    { "top", "cell_border_top" },
+                    { "left", "cell_border_left" },
+                    { "right", "cell_border_right" },
+                    { "bottom", "cell_border_bottom" },
+                    { "all", "cell_border_all" }
+                };
                 var tBorders = new Dictionary<string, bool>()
-            {
-                { "top", true },
-                { "left", true },
-                { "right", true },
-                { "bottom", true }
-            };
+                {
+                    { "top", true },
+                    { "left", true },
+                    { "right", true },
+                    { "bottom", true }
+                };
 
                 var cells = new List<XElement>();
 

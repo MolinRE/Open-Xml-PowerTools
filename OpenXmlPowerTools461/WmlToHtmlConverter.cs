@@ -897,24 +897,31 @@ namespace OpenXmlPowerTools
                         // Take the next row, after the current
                         var row = tbl.Elements(W.tr).Skip(currentRowIndex).FirstOrDefault();
                         if (row == null)
+                        {
                             break;
+                        }
 
                         // Cell on the corresponding to the curent column position
                         var rowCurrentCellIndex = currentCellIndex;
                         // Calculate index of the merging cell in this specific row:
                         // Go through the cells in row, and if cell is 'gridSpan'ed, decrement the 'rowCurrentCellIndex'
-                        for (int i = 0; i < rowCurrentCellIndex; i++)
+                        var gs = 1; // 'gridSpan' element value
+                        for (int i = 0; i < currentCellIndex; i++)
                         {
+                            if (gs > 1)
+                            {
+                                // preserve index if gridSpan
+                                rowCurrentCellIndex--;
+                                gs--;
+                            }
+
                             var cellInRow = row.Elements(W.tc).ElementAt(i);
                             if (cellInRow.Element(W.tcPr) != null && cellInRow.Element(W.tcPr).Element(W.gridSpan) != null)
                             {
                                 if (cellInRow.Element(W.tcPr).Element(W.gridSpan).Attribute(W.val) != null)
                                 {
                                     var gridSpanValue = cellInRow.Element(W.tcPr).Element(W.gridSpan).Attribute(W.val).Value;
-                                    if (int.TryParse(gridSpanValue, out int gs) && gs > 1)
-                                    {
-                                        rowCurrentCellIndex -= (gs - 1);
-                                    }
+                                    int.TryParse(gridSpanValue, out gs);
                                 }
                             }
                         }

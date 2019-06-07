@@ -4992,6 +4992,9 @@ listSeparator
         public static readonly XName gridAfter = w + "gridAfter";
         public static readonly XName gridBefore = w + "gridBefore";
         public static readonly XName gridCol = w + "gridCol";
+        /// <summary>
+        /// Grid Columns Spanned by Current Table Cell
+        /// </summary>
         public static readonly XName gridSpan = w + "gridSpan";
         public static readonly XName group = w + "group";
         public static readonly XName growAutofit = w + "growAutofit";
@@ -5013,6 +5016,9 @@ listSeparator
         public static readonly XName helpText = w + "helpText";
         public static readonly XName hidden = w + "hidden";
         public static readonly XName hideGrammaticalErrors = w + "hideGrammaticalErrors";
+        /// <summary>
+        /// Ignore End Of Cell Marker In Row Height Calculation
+        /// </summary>
         public static readonly XName hideMark = w + "hideMark";
         public static readonly XName hideSpellingErrors = w + "hideSpellingErrors";
         public static readonly XName highlight = w + "highlight";

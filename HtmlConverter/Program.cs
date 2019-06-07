@@ -1,15 +1,4 @@
-﻿/***************************************************************************
-
-Copyright (c) Microsoft Corporation 2010.
-
-This code is licensed using the Microsoft Public License (Ms-PL).  The text of the license
-can be found here:
-
-http://www.microsoft.com/resources/sharedsource/licensingbasics/publiclicense.mspx
-
-***************************************************************************/
-
-using System;
+﻿using System;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -32,7 +21,7 @@ namespace HtmlConverter
             // Настраиваем кэш лобби, чтобы не лезть в базу
             WordImportDal.Lobbies = WordImportDal.GetAllLobbies();
 
-            foreach (var file in Directory.GetFiles(picDirPath, "пропал гриф-1" + ".docx"))
+            foreach (var file in Directory.GetFiles(picDirPath, "320" + ".docx"))
             {
                 ConvertToHtml(file, picDirPath);
             }
