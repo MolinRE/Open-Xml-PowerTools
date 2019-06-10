@@ -206,6 +206,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                     HtmlToWmlFontUpdater.UpdateFontsPart(wDoc, html, settings);
                     ThemeUpdater.UpdateThemePart(wDoc, html, settings);
                     NumberingUpdater.UpdateNumberingPart(wDoc, html, settings);
+                    SetPrintOrientation(wDoc, settings.Orientation);
                 }
                 newWmlDocument = streamDoc.GetModifiedWmlDocument();
             }
@@ -383,6 +384,91 @@ namespace OpenXmlPowerTools.HtmlToWml
             }
             return node;
         }
+
+        /// <summary>
+        /// Sets the print orientation for all the sections of the document.
+        /// </summary>
+        /// <param name="document">Doucment object.</param>
+        /// <param name="newOrientation">Document orientation (portrait or landscape).</param>
+        /// <remarks>Credits to https://docs.microsoft.com/en-us/office/open-xml/how-to-change-the-print-orientation-of-a-word-processing-document</remarks>
+        public static void SetPrintOrientation(WordprocessingDocument document, DocumentFormat.OpenXml.Wordprocessing.PageOrientationValues newOrientation)
+        {
+            bool documentChanged = false;
+
+            var docPart = document.MainDocumentPart;
+            var sections = docPart.Document.Descendants<DocumentFormat.OpenXml.Wordprocessing.SectionProperties>();
+
+            foreach (var sectPr in sections)
+            {
+                bool pageOrientationChanged = false;
+
+                var pgSz = sectPr.Descendants<DocumentFormat.OpenXml.Wordprocessing.PageSize>().FirstOrDefault();
+                if (pgSz != null)
+                {
+                    // No Orient property? Create it now. Otherwise, just 
+                    // set its value. Assume that the default orientation 
+                    // is Portrait.
+                    if (pgSz.Orient == null)
+                    {
+                        // Need to create the attribute. You do not need to 
+                        // create the Orient property if the property does not 
+                        // already exist, and you are setting it to Portrait. 
+                        // That is the default value.
+                        if (newOrientation != DocumentFormat.OpenXml.Wordprocessing.PageOrientationValues.Portrait)
+                        {
+                            pageOrientationChanged = true;
+                            documentChanged = true;
+                            pgSz.Orient = new DocumentFormat.OpenXml.EnumValue<DocumentFormat.OpenXml.Wordprocessing.PageOrientationValues>(newOrientation);
+                        }
+                    }
+                    else
+                    {
+                        // The Orient property exists, but its value
+                        // is different than the new value.
+                        if (pgSz.Orient.Value != newOrientation)
+                        {
+                            pgSz.Orient.Value = newOrientation;
+                            pageOrientationChanged = true;
+                            documentChanged = true;
+                        }
+                    }
+
+                    if (pageOrientationChanged)
+                    {
+                        // Changing the orientation is not enough. You must also 
+                        // change the page size.
+                        var width = pgSz.Width;
+                        var height = pgSz.Height;
+                        pgSz.Width = height;
+                        pgSz.Height = width;
+
+                        var pgMar = sectPr.Descendants<DocumentFormat.OpenXml.Wordprocessing.PageMargin>().FirstOrDefault();
+                        if (pgMar != null)
+                        {
+                            // Rotate margins. Printer settings control how far you 
+                            // rotate when switching to landscape mode. Not having those
+                            // settings, this code rotates 90 degrees. You could easily
+                            // modify this behavior, or make it a parameter for the 
+                            // procedure.
+                            var top = pgMar.Top.Value;
+                            var bottom = pgMar.Bottom.Value;
+                            var left = pgMar.Left.Value;
+                            var right = pgMar.Right.Value;
+
+                            pgMar.Top = new DocumentFormat.OpenXml.Int32Value((int)left);
+                            pgMar.Bottom = new DocumentFormat.OpenXml.Int32Value((int)right);
+                            pgMar.Left = new DocumentFormat.OpenXml.UInt32Value((uint)Math.Max(0, bottom));
+                            pgMar.Right = new DocumentFormat.OpenXml.UInt32Value((uint)Math.Max(0, top));
+                        }
+                    }
+                }
+            }
+            if (documentChanged)
+            {
+                docPart.Document.Save();
+            }
+        }
+
 
         private static Dictionary<XName, int> Order_pPr = new Dictionary<XName, int>
         {

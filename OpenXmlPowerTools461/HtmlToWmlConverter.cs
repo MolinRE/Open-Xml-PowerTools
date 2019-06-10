@@ -43,6 +43,11 @@ namespace OpenXmlPowerTools
         public string DefaultBlockContentMargin;
         public string BaseUriForImages;
 
+        /// <summary>
+        /// Document orientation. Overwrites exisitng settings.
+        /// </summary>
+        public DocumentFormat.OpenXml.Wordprocessing.PageOrientationValues Orientation;
+
         public Twip PageWidthTwips { get { return (long)SectPr.Elements(W.pgSz).Attributes(W._w).FirstOrDefault(); } }
         public Twip PageMarginLeftTwips { get { return (long)SectPr.Elements(W.pgMar).Attributes(W.left).FirstOrDefault(); } }
         public Twip PageMarginRightTwips { get { return (long)SectPr.Elements(W.pgMar).Attributes(W.right).FirstOrDefault(); } }
@@ -370,6 +375,7 @@ AAAAAAAAAAAAAAAANi8AAGRvY1Byb3BzL2FwcC54bWxQSwUGAAAAAAwADAAJAwAA3DEAAAAA";
                     settings.SectPr = new XElement(W.sectPr,
                         existingSectPr.Elements(W.pgSz),
                         existingSectPr.Elements(W.pgMar));
+                    settings.Orientation = DocumentFormat.OpenXml.Wordprocessing.PageOrientationValues.Portrait;
                 }
             }
             return settings;
