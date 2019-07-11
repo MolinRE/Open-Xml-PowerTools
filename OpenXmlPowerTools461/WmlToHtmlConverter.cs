@@ -77,6 +77,14 @@ namespace OpenXmlPowerTools
         }
     }
 
+
+    public class CurrentGridParameters
+    {
+        public decimal[] ColWidthPercents { get; set; }
+        public int CellCount = 0;
+    }
+
+
     [SuppressMessage("ReSharper", "FieldCanBeMadeReadOnly.Global")]
     public class WmlToHtmlConverterSettings
     {
@@ -90,6 +98,12 @@ namespace OpenXmlPowerTools
         public Dictionary<string, Func<string, int, string, string>> ListItemImplementations;
         public Func<ImageInfo, XElement> ImageHandler;
 
+        /// <summary>
+        /// Inner parameters for table analyse
+        /// </summary>
+        public CurrentGridParameters InnerGridParameters;
+
+
         public WmlToHtmlConverterSettings()
         {
             PageTitle = "";
@@ -100,6 +114,8 @@ namespace OpenXmlPowerTools
             RestrictToSupportedLanguages = false;
             RestrictToSupportedNumberingFormats = false;
             ListItemImplementations = ListItemRetrieverSettings.DefaultListItemTextImplementations;
+
+            InnerGridParameters = new CurrentGridParameters();
         }
 
         public WmlToHtmlConverterSettings(HtmlConverterSettings htmlConverterSettings)
@@ -113,6 +129,8 @@ namespace OpenXmlPowerTools
             RestrictToSupportedNumberingFormats = htmlConverterSettings.RestrictToSupportedNumberingFormats;
             ListItemImplementations = htmlConverterSettings.ListItemImplementations;
             ImageHandler = htmlConverterSettings.ImageHandler;
+
+            InnerGridParameters = new CurrentGridParameters();
         }
     }
 
@@ -794,13 +812,42 @@ namespace OpenXmlPowerTools
             return paragraph;
         }
 
+
+        //static PercentsFromGrid lastTblGrid = null;
+        
+
         private static object ProcessTable(WordprocessingDocument wordDoc, WmlToHtmlConverterSettings settings, XElement element, decimal currentMarginLeft)
         {
+            settings.InnerGridParameters.ColWidthPercents = null;
             var style = new Dictionary<string, string>();
             style.AddIfMissing("border-collapse", "collapse");
             style.AddIfMissing("border", "none");
             var bidiVisual = element.Elements(W.tblPr).Elements(W.bidiVisual).FirstOrDefault();
             var tblW = element.Elements(W.tblPr).Elements(W.tblW).FirstOrDefault();
+            var tblGrid = element.Elements(W.tblGrid).FirstOrDefault();
+
+
+            // calculate column widths in percents using tblGrid
+            if (tblGrid != null)
+            {
+                var gridCols = tblGrid.Elements(W.gridCol);
+                if(gridCols.Any())
+                {
+
+                    decimal widthSum = gridCols.Sum(gc=> (decimal)gc.Attribute(W._w));
+
+                    settings.InnerGridParameters.ColWidthPercents = new decimal[gridCols.Count()];
+                    decimal onePercent = 100m/ widthSum;
+                    int colgrIndex = 0;
+                    foreach (var gridCol in gridCols)
+                    {
+                        settings.InnerGridParameters.ColWidthPercents[colgrIndex] = onePercent * (decimal)gridCol.Attribute(W._w);
+                        colgrIndex++;
+                    }
+                }
+            }
+
+            // common width in percents
             if (tblW != null)
             {
                 var type = (string)tblW.Attribute(W.type);
@@ -810,6 +857,7 @@ namespace OpenXmlPowerTools
                     style.AddIfMissing("width", (w / 50) + "%");
                 }
             }
+
             var tblInd = element.Elements(W.tblPr).Elements(W.tblInd).FirstOrDefault();
             if (tblInd != null)
             {
@@ -866,9 +914,11 @@ namespace OpenXmlPowerTools
         [SuppressMessage("ReSharper", "PossibleNullReferenceException")]
         private static object ProcessTableCell(WordprocessingDocument wordDoc, WmlToHtmlConverterSettings settings, XElement element)
         {
+            settings.InnerGridParameters.CellCount++;
             var style = new Dictionary<string, string>();
             XAttribute colSpan = null;
             XAttribute rowSpan = null;
+            int? gridSpan = null;
 
             var tcPr = element.Element(W.tcPr);
             if (tcPr != null)
@@ -876,16 +926,30 @@ namespace OpenXmlPowerTools
                 if ((string) tcPr.Elements(W.vMerge).Attributes(W.val).FirstOrDefault() == "restart")
                 {
                     var currentRowIndex = element.Parent.ElementsBeforeSelf(W.tr).Count();
-                    var currentCellIndex = element.ElementsBeforeSelf(W.tc).Count();
+
+                    // calculate logical cell number
+                    var logicalCellNumber = element.ElementsBeforeSelf(W.tc).Count() + 1;
+
+                    var currGridSpan = element.Element(W.tcPr).Element(W.gridSpan);
+                    int currGridSpanValue = 0;
+                    if (null != currGridSpan)
+                    {
+                        if (int.TryParse(currGridSpan.Attribute(W.val).Value, out currGridSpanValue))
+                        {
+                            logicalCellNumber += currGridSpanValue -1;
+                        }
+                    }
+                    
                     var gridSpans = element.ElementsBeforeSelf(W.tc)
                         .Where(s => s.Element(W.tcPr)?.Element(W.gridSpan) != null)
                         .Select(s => s.Element(W.tcPr).Element(W.gridSpan).Attribute(W.val).Value)
                         .ToArray();
+
                     foreach (var val in gridSpans)
                     {
                         if (int.TryParse(val, out int gridSpanVal))
                         {
-                            currentCellIndex += (gridSpanVal - 1);
+                            logicalCellNumber += (gridSpanVal - 1);
                         }
                     }
 
@@ -901,28 +965,37 @@ namespace OpenXmlPowerTools
                             break;
                         }
 
+                        var currentRowCellsCount = row.Elements(W.tc).Count();
                         // Cell on the corresponding to the curent column position
-                        var rowCurrentCellIndex = currentCellIndex;
+                        int rowCurrentCellIndex = 0;
                         // Calculate index of the merging cell in this specific row:
                         // Go through the cells in row, and if cell is 'gridSpan'ed, decrement the 'rowCurrentCellIndex'
-                        var gs = 1; // 'gridSpan' element value
-                        for (int i = 0; i < currentCellIndex; i++)
-                        {
-                            if (gs > 1)
-                            {
-                                // preserve index if gridSpan
-                                rowCurrentCellIndex--;
-                                gs--;
-                            }
+                        int gs = 1; // 'gridSpan' element value
 
+                        int currentCellIndex = 0;
+
+                        // calc actual cell index in row
+                        for (int i = 0; i < currentRowCellsCount; i++)
+                        {
                             var cellInRow = row.Elements(W.tc).ElementAt(i);
                             if (cellInRow.Element(W.tcPr) != null && cellInRow.Element(W.tcPr).Element(W.gridSpan) != null)
                             {
                                 if (cellInRow.Element(W.tcPr).Element(W.gridSpan).Attribute(W.val) != null)
                                 {
                                     var gridSpanValue = cellInRow.Element(W.tcPr).Element(W.gridSpan).Attribute(W.val).Value;
-                                    int.TryParse(gridSpanValue, out gs);
+                                    if(!int.TryParse(gridSpanValue, out gs))
+                                    {
+                                        gs = 1;
+                                    }
                                 }
+                            }
+
+                            currentCellIndex += gs;
+
+                            if (currentCellIndex >= logicalCellNumber)
+                            {
+                                rowCurrentCellIndex = i;
+                                break;
                             }
                         }
 
@@ -937,7 +1010,7 @@ namespace OpenXmlPowerTools
                         if ((string) cell2.Elements(W.tcPr).Elements(W.vMerge).Attributes(W.val).FirstOrDefault() == "restart")
                             break;
 
-                        // Go to the next row
+                        // Go to the next row ( have merge and not have "restart")
                         currentRowIndex++;
                         rowSpanCount++;
                     }
@@ -962,15 +1035,41 @@ namespace OpenXmlPowerTools
                 }
                 style.AddIfMissing("vertical-align", "top");
 
-                if ((string) tcPr.Elements(W.tcW).Attributes(W.type).FirstOrDefault() == "dxa")
+                gridSpan = tcPr.Elements(W.gridSpan).Attributes(W.val).Select(a => (int?)a).FirstOrDefault();
+                gridSpan = !gridSpan.HasValue ? 1 : gridSpan;
+
+                string wtype = (string)tcPr.Elements(W.tcW).Attributes(W.type).FirstOrDefault();
+
+                if (wtype == "dxa")
                 {
                     decimal width = (int) tcPr.Elements(W.tcW).Attributes(W._w).FirstOrDefault();
                     style.AddIfMissing("width", string.Format(NumberFormatInfo.InvariantInfo, "{0}pt", width/20m));
                 }
-                if ((string) tcPr.Elements(W.tcW).Attributes(W.type).FirstOrDefault() == "pct")
+                if (wtype == "pct" ||
+                    wtype == "auto")
                 {
-                    decimal width = (int) tcPr.Elements(W.tcW).Attributes(W._w).FirstOrDefault();
-                    style.AddIfMissing("width", string.Format(NumberFormatInfo.InvariantInfo, "{0:0.0}%", width/50m));
+                    if (settings.InnerGridParameters.ColWidthPercents != null && settings.InnerGridParameters.ColWidthPercents.Length > (settings.InnerGridParameters.CellCount - 1))
+                    {
+                        decimal width = 0;
+                        for (int cs = 0; cs < gridSpan.Value; cs++)
+                        {
+                            if(settings.InnerGridParameters.ColWidthPercents.Length <= (settings.InnerGridParameters.CellCount - 1))
+                            {
+                                break;
+                            }
+                            width += settings.InnerGridParameters.ColWidthPercents[settings.InnerGridParameters.CellCount - 1];
+                            settings.InnerGridParameters.CellCount++;
+                        }
+                        style.AddIfMissing("width", string.Format(NumberFormatInfo.InvariantInfo, "{0:0.0}%", width));
+                    }
+                    else
+                    {
+                        if (wtype == "pct")
+                        {
+                            decimal width = (int)tcPr.Elements(W.tcW).Attributes(W._w).FirstOrDefault();
+                            style.AddIfMissing("width", string.Format(NumberFormatInfo.InvariantInfo, "{0:0.0}%", width / 50m));
+                        }
+                    }
                 }
 
                 var tcBorders = tcPr.Element(W.tcBorders);
@@ -981,9 +1080,10 @@ namespace OpenXmlPowerTools
 
                 CreateStyleFromShd(style, tcPr.Element(W.shd));
 
-                var gridSpan = tcPr.Elements(W.gridSpan).Attributes(W.val).Select(a => (int?) a).FirstOrDefault();
-                if (gridSpan != null)
-                    colSpan = new XAttribute("colspan", (int) gridSpan);
+                if (gridSpan.HasValue && gridSpan.Value != 1)
+                {
+                    colSpan = new XAttribute("colspan", (int)gridSpan);
+                }
             }
             style.AddIfMissing("padding-top", "0");
             style.AddIfMissing("padding-bottom", "0");
@@ -999,6 +1099,7 @@ namespace OpenXmlPowerTools
         private static object ProcessTableRow(WordprocessingDocument wordDoc, WmlToHtmlConverterSettings settings, XElement element,
             decimal currentMarginLeft)
         {
+            settings.InnerGridParameters.CellCount = 0;
             var style = new Dictionary<string, string>();
             int? trHeight = (int?) element.Elements(W.trPr).Elements(W.trHeight).Attributes(W.val).FirstOrDefault();
             if (trHeight != null)
