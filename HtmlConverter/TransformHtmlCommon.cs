@@ -13,6 +13,7 @@ using System.Xml.Linq;
 using OpenXmlPowerTools;
 using RestSharp;
 using HtmlConverter01.Models;
+using WebArmModels.Upload;
 
 namespace HtmlConverter
 {
