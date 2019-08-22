@@ -169,12 +169,14 @@ namespace OpenXmlPowerTools.HtmlToWml
             string annotatedHtmlDumpFileName)
         {
             if (emptyDocument == null)
+            {
                 emptyDocument = HtmlToWmlConverter.EmptyDocument;
+            }
 
             NextRectId = 1025;
 
             // clone and transform all element names to lower case
-            XElement html = (XElement)TransformToLower(xhtml);
+            var html = (XElement)TransformToLower(xhtml);
 
             // add pseudo cells for rowspan
             html = (XElement)AddPseudoCells(html);
@@ -195,7 +197,7 @@ namespace OpenXmlPowerTools.HtmlToWml
 
             WmlDocument newWmlDocument;
 
-            using (OpenXmlMemoryStreamDocument streamDoc = new OpenXmlMemoryStreamDocument(emptyDocument))
+            using (var streamDoc = new OpenXmlMemoryStreamDocument(emptyDocument))
             {
                 using (WordprocessingDocument wDoc = streamDoc.GetWordprocessingDocument())
                 {
@@ -208,6 +210,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                     NumberingUpdater.UpdateNumberingPart(wDoc, html, settings);
                     SetPrintOrientation(wDoc, settings.Orientation);
                 }
+
                 newWmlDocument = streamDoc.GetModifiedWmlDocument();
             }
 
@@ -2382,39 +2385,51 @@ namespace OpenXmlPowerTools.HtmlToWml
             byte[] ba = null;
             Bitmap bmp = null;
 
-            if (srcAttribute.StartsWith("data:"))
+            if (settings.GetImageHandler == null)
             {
-                var semiIndex = srcAttribute.IndexOf(';');
-                var commaIndex = srcAttribute.IndexOf(',', semiIndex);
-                var base64 = srcAttribute.Substring(commaIndex + 1);
-                ba = Convert.FromBase64String(base64);
-                using (MemoryStream ms = new MemoryStream(ba))
+                // Use original logic
+                if (srcAttribute.StartsWith("data:"))
                 {
-                    bmp = new Bitmap(ms);
+                    var semiIndex = srcAttribute.IndexOf(';');
+                    var commaIndex = srcAttribute.IndexOf(',', semiIndex);
+                    var base64 = srcAttribute.Substring(commaIndex + 1);
+                    ba = Convert.FromBase64String(base64);
+                    using (MemoryStream ms = new MemoryStream(ba))
+                    {
+                        bmp = new Bitmap(ms);
+                    }
+                }
+                else
+                {
+                    try
+                    {
+                        bmp = new Bitmap(settings.BaseUriForImages + "/" + srcAttribute);
+                    }
+                    catch (ArgumentException)
+                    {
+                        return null;
+                    }
+                    catch (NotSupportedException)
+                    {
+                        return null;
+                    }
+                    MemoryStream ms = new MemoryStream();
+                    bmp.Save(ms, bmp.RawFormat);
+                    ba = ms.ToArray();
                 }
             }
             else
             {
-                try
+                ba = settings.GetImageHandler(element);
+                using (var stream = new MemoryStream(ba))
                 {
-                    bmp = new Bitmap(settings.BaseUriForImages + "/" + srcAttribute);
+                    bmp = new Bitmap(stream);
                 }
-                catch (ArgumentException)
-                {
-                    return null;
-                }
-                catch (NotSupportedException)
-                {
-                    return null;
-                }
-                MemoryStream ms = new MemoryStream();
-                bmp.Save(ms, bmp.RawFormat);
-                ba = ms.ToArray();
             }
 
             MainDocumentPart mdp = wDoc.MainDocumentPart;
             string rId = "R" + Guid.NewGuid().ToString().Replace("-", "");
-            ImagePartType ipt = ImagePartType.Png;
+            ImagePartType ipt =  ImagePartType.Jpeg;
             ImagePart newPart = mdp.AddImagePart(ipt, rId);
             using (Stream s = newPart.GetStream(FileMode.Create, FileAccess.ReadWrite))
                 s.Write(ba, 0, ba.GetUpperBound(0) + 1);

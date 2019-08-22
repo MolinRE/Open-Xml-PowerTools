@@ -48,6 +48,8 @@ namespace OpenXmlPowerTools
         /// </summary>
         public DocumentFormat.OpenXml.Wordprocessing.PageOrientationValues Orientation;
 
+        public Func<XElement, byte[]> GetImageHandler;
+
         public Twip PageWidthTwips { get { return (long)SectPr.Elements(W.pgSz).Attributes(W._w).FirstOrDefault(); } }
         public Twip PageMarginLeftTwips { get { return (long)SectPr.Elements(W.pgMar).Attributes(W.left).FirstOrDefault(); } }
         public Twip PageMarginRightTwips { get { return (long)SectPr.Elements(W.pgMar).Attributes(W.right).FirstOrDefault(); } }
@@ -78,6 +80,15 @@ namespace OpenXmlPowerTools
             string annotatedHtmlDumpFileName)
         {
             return HtmlToWmlConverterCore.ConvertHtmlToWml(defaultCss, authorCss, userCss, xhtml, settings, emptyDocument, annotatedHtmlDumpFileName);
+        }
+
+        public static WmlDocument ConvertHtmlToWml(
+            string defaultCss,
+            string userCss,
+            XElement xhtml,
+            HtmlToWmlConverterSettings settings)
+        {
+            return HtmlToWmlConverterCore.ConvertHtmlToWml(defaultCss, "", userCss, xhtml, settings, null, null);
         }
 
         private static string s_Blank_wml_base64 = @"UEsDBBQABgAIAAAAIQAJJIeCgQEAAI4FAAATAAgCW0NvbnRlbnRfVHlwZXNdLnhtbCCiBAIooAAC
@@ -339,11 +350,11 @@ AAAAAAAAAAAAAAAANi8AAGRvY1Byb3BzL2FwcC54bWxQSwUGAAAAAAwADAAJAwAA3DEAAAAA";
 
         public static HtmlToWmlConverterSettings GetDefaultSettings(WmlDocument wmlDocument)
         {
-            HtmlToWmlConverterSettings settings = new HtmlToWmlConverterSettings();
-            using (MemoryStream ms = new MemoryStream())
+            var settings = new HtmlToWmlConverterSettings();
+            using (var ms = new MemoryStream())
             {
                 ms.Write(wmlDocument.DocumentByteArray, 0, wmlDocument.DocumentByteArray.Length);
-                using (WordprocessingDocument wDoc = WordprocessingDocument.Open(ms, false))
+                using (var wDoc = WordprocessingDocument.Open(ms, false))
                 {
                     string majorLatinFont, minorLatinFont;
                     double defaultFontSize;
@@ -378,6 +389,7 @@ AAAAAAAAAAAAAAAANi8AAGRvY1Byb3BzL2FwcC54bWxQSwUGAAAAAAwADAAJAwAA3DEAAAAA";
                     settings.Orientation = DocumentFormat.OpenXml.Wordprocessing.PageOrientationValues.Portrait;
                 }
             }
+
             return settings;
         }
 
