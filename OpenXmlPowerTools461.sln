@@ -9,6 +9,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HtmlConverter", "HtmlConver
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebArmTests", "WebArmTests\WebArmTests.csproj", "{6A9975DB-7ECC-43D2-BCD3-E79816CB472F}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DocxConverter", "DocxConverter\DocxConverter.csproj", "{E893F245-3E16-4B14-AE11-24FFEC30BB14}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebArmModels", "..\WebArmModels\WebArmModels\WebArmModels.csproj", "{AE6FC66D-C352-4E39-A4FC-673D0D00EFDC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +31,14 @@ Global
 		{6A9975DB-7ECC-43D2-BCD3-E79816CB472F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6A9975DB-7ECC-43D2-BCD3-E79816CB472F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6A9975DB-7ECC-43D2-BCD3-E79816CB472F}.Release|Any CPU.Build.0 = Release|Any CPU
+		{E893F245-3E16-4B14-AE11-24FFEC30BB14}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{E893F245-3E16-4B14-AE11-24FFEC30BB14}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{E893F245-3E16-4B14-AE11-24FFEC30BB14}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{E893F245-3E16-4B14-AE11-24FFEC30BB14}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AE6FC66D-C352-4E39-A4FC-673D0D00EFDC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AE6FC66D-C352-4E39-A4FC-673D0D00EFDC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AE6FC66D-C352-4E39-A4FC-673D0D00EFDC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AE6FC66D-C352-4E39-A4FC-673D0D00EFDC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
