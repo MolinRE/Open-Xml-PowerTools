@@ -33,7 +33,7 @@ namespace DocxConverter
             // Не пихать обычный HTML. Код настроен на формат веб-арма
             string directory = @"C:\Users\k.komarov\source\example\docx\";
 
-            foreach (var file in Directory.GetFiles(directory, "118_69634.xml"))
+            foreach (var file in Directory.GetFiles(directory, "118_69738" + ".xml"))
             {
                 ConvertToDocx(file, directory);
             }
@@ -171,18 +171,18 @@ namespace DocxConverter
                 settings.Orientation = PageOrientationValues.Landscape;
             }
 
-            try
-            {
+            //try
+            //{
                 WmlDocument doc = HtmlToWmlConverter.ConvertHtmlToWml(defaultCss, userCss, html, settings);
 
                 doc.SaveAs(dest);
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-                Console.WriteLine("Нажмите любую клавишу для продолжения.");
-                Console.ReadKey();
-            }
+            //}
+            //catch (Exception ex)
+            //{
+            //    Console.WriteLine(ex.Message);
+            //    Console.WriteLine("Нажмите любую клавишу для продолжения.");
+            //    Console.ReadKey();
+            //}
         }
 
         private static readonly Regex ImageRegex = new Regex(@"/data/doc/image/(?<iid>-?\d+)\?moduleId=(?<mid>-?\d+)&id=(?<id>-?\d+)?$", RegexOptions.Compiled);
