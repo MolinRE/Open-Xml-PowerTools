@@ -1190,7 +1190,7 @@ namespace OpenXmlPowerTools.HtmlToWml
         {
             int propertySequence = 1;
 
-            CssParser defaultCssParser = new CssParser();
+            var defaultCssParser = new CssParser();
             defaultCssDoc = defaultCssParser.ParseText(defaultCss);
             ApplyCssDocument(
                 defaultCssDoc,
@@ -1211,7 +1211,7 @@ namespace OpenXmlPowerTools.HtmlToWml
             //DumpCss(userAgentCssDoc);
             //Environment.Exit(0);
 
-            CssParser userCssParser = new CssParser();
+            var userCssParser = new CssParser();
             userCssDoc = userCssParser.ParseText(userCss);
             ApplyCssDocument(
                 userCssDoc,
@@ -1323,6 +1323,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                 CssExpression computedValue = GetInheritedOrInitializedValue(computedValues, propertyInfo, element, propertyName, false, settings);
                 return computedValue;
             }
+
             Property prop = propList[pName];
             string propStr = prop.Expression.ToString();
             if (propStr == "inherited" || propStr == "auto")
@@ -1351,7 +1352,12 @@ namespace OpenXmlPowerTools.HtmlToWml
         //  compute value
         //  set the computed value
         //  return the computed value
-        public static CssExpression GetInheritedOrInitializedValue(Dictionary<string, CssExpression> computedValues, PropertyInfo propertyInfo, XElement element, string propertyName, bool valueIsInherit, HtmlToWmlConverterSettings settings)
+        public static CssExpression GetInheritedOrInitializedValue(Dictionary<string, CssExpression> computedValues, 
+            PropertyInfo propertyInfo, 
+            XElement element, 
+            string propertyName, 
+            bool valueIsInherit, 
+            HtmlToWmlConverterSettings settings)
         {
             if ((propertyInfo.Inherits || valueIsInherit) && element.Parent != null && propertyInfo.Includes(element.Parent, settings))
             {
@@ -1359,12 +1365,17 @@ namespace OpenXmlPowerTools.HtmlToWml
                 computedValues.Add(propertyName, parentPropertyValue);
                 return parentPropertyValue;
             }
+
             CssExpression initialPropertyValue = propertyInfo.InitialValue(element, settings);
             CssExpression computedValue;
             if (propertyInfo.ComputedValue == null)
+            {
                 computedValue = initialPropertyValue;
+            }
             else
+            {
                 computedValue = propertyInfo.ComputedValue(element, initialPropertyValue, settings);
+            }
             computedValues.Add(propertyName, computedValue);
             return computedValue;
         }

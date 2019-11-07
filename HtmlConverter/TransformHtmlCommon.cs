@@ -263,9 +263,9 @@ namespace HtmlConverter
                         }
                         else
                         {
-                            parseErrorCount++;
-                            imgElem.Remove();
-                            continue;
+                            //parseErrorCount++;
+                            //imgElem.Remove();
+                            //continue;
                         }
                     }
                     else
@@ -1506,7 +1506,12 @@ namespace HtmlConverter
                 }
                 else
                 {
-                    Console.WriteLine("Не удалось загрузить {0}\r\n{1}", imageInfo.Url, response.ErrorMessage);
+                    Debug.WriteLine("Не удалось загрузить {0}", imageInfo.Url);
+                    if (!string.IsNullOrEmpty(response.ErrorMessage))
+                    {
+                        Debug.WriteLine("\r\n" + response.ErrorMessage);
+                    }
+                    return new XElement("img", new XAttribute("src", $""));
                 }
             }
 
@@ -1673,8 +1678,6 @@ namespace HtmlConverter
             ImageFormat format = null,
             EncoderParameters parameters = null)
         {
-            //using (var img = new Metafile(source))
-            //{
             var f = format ?? ImageFormat.Png;
 
             //Determine default background color. 
@@ -1712,7 +1715,6 @@ namespace HtmlConverter
 
                 bitmap.Save(destination, codec, parameters);
             }
-            //}
         }
 
         /// <summary>

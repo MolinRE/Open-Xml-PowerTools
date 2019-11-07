@@ -3290,6 +3290,7 @@ namespace OpenXmlPowerTools
             if (blipFill == null) return null;
 
             var rLink = blipFill.Elements(A.blip).Attributes(R.link).FirstOrDefault();
+            // if image is link, then this will be its url
             var descr = (string)containerElement
                 .Elements(A.graphic)
                 .Elements(A.graphicData)
@@ -3298,7 +3299,10 @@ namespace OpenXmlPowerTools
                 .Elements(Pic.cNvPr)
                 .Attributes("descr")
                 .FirstOrDefault();
-            if (rLink != null && descr != null)
+
+            var rEmbed = blipFill.Elements(A.blip).Attributes(R.embed).FirstOrDefault();
+            // first check if embeded image is null
+            if (rEmbed == null && rLink != null && descr != null)
             {
                 if (extentCx != null && extentCy != null)
                 {
@@ -3344,7 +3348,6 @@ namespace OpenXmlPowerTools
             }
             else
             {
-                var rEmbed = blipFill.Elements(A.blip).Attributes(R.embed).FirstOrDefault();
                 if (rEmbed != null)
                 {
                     var imageRid = (string)rEmbed;
