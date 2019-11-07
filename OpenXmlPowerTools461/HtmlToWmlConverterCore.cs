@@ -253,16 +253,35 @@ namespace OpenXmlPowerTools.HtmlToWml
                     .ToList();
                 foreach (var rowToAddTo in rowsToAddTo)
                 {
+                    var td = new XElement(XhtmlNoNamespace.td, 
+                        rowSpanCell.Attributes(), 
+                        new XAttribute("HtmlToWmlVMergeNoRestart", "true"));
+
                     if (colNumber > 0)
                     {
                         var tdToAddAfter = rowToAddTo
                             .Elements(XhtmlNoNamespace.td)
                             .Skip(colNumber - 1)
                             .FirstOrDefault();
-                        var td = new XElement(XhtmlNoNamespace.td,
-                            rowSpanCell.Attributes(),
-                            new XAttribute("HtmlToWmlVMergeNoRestart", "true"));
-                        tdToAddAfter.AddAfterSelf(td);
+
+                        // in case if there are not enough cells for some reason
+                        if (tdToAddAfter == null)
+                        {
+                            if (rowToAddTo.Elements(XhtmlNoNamespace.td).Any())
+                            {
+                                // either add last
+                                rowToAddTo.Elements(XhtmlNoNamespace.td).Last().AddAfterSelf(td);
+                            }
+                            else
+                            {
+                                // or first
+                                rowToAddTo.Add(td);
+                            }
+                        }
+                        else
+                        {
+                            tdToAddAfter.AddAfterSelf(td);
+                        }
                     }
                     else
                     {
@@ -270,10 +289,17 @@ namespace OpenXmlPowerTools.HtmlToWml
                             .Elements(XhtmlNoNamespace.td)
                             .Skip(colNumber)
                             .FirstOrDefault();
-                        var td = new XElement(XhtmlNoNamespace.td,
-                            rowSpanCell.Attributes(),
-                            new XAttribute("HtmlToWmlVMergeNoRestart", "true"));
-                        tdToAddBefore.AddBeforeSelf(td);
+
+                        // in case if there are not enough cells for some reason
+                        if (tdToAddBefore == null)
+                        {
+                            // add first
+                            rowToAddTo.Add(td);
+                        }
+                        else
+                        {
+                            tdToAddBefore.AddBeforeSelf(td);
+                        }
                     }
                 }
             }
