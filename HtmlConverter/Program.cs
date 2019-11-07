@@ -17,12 +17,12 @@ namespace HtmlConverter
         {
             //ConsoleHelpers.ImportFromCsv("E:\\lobby.csv");
             //ParseBuffer("document.html");
-            var picDirPath = @"C:\Users\k.komarov\source\example\pic";
+            var picDirPath = @"C:\Users\k.komarov\source\example\bugs";
 
             // Настраиваем кэш лобби, чтобы не лезть в базу
             WordImportDal.Lobbies = WordImportDal.GetAllLobbies();
 
-            foreach (var file in Directory.GetFiles(picDirPath, "Руководство пользователя ЕИС (версия 8.2)" + ".docx"))
+            foreach (var file in Directory.GetFiles(picDirPath, "320" + ".docx"))
             {
                 ConvertToHtml(file, picDirPath);
             }

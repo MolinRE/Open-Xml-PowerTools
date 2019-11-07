@@ -3268,21 +3268,20 @@ namespace OpenXmlPowerTools.HtmlToWml
 
         private static XElement GetTableProperties(XElement element)
         {
+
             XElement bidiVisual = null;
             string direction = GetDirection(element);
             if (direction == "rtl")
-            {
                 bidiVisual = new XElement(W.bidiVisual);
-            }
 
-            var tableWidth = GetTableWidth(element);
-            var cellSpacing = GetTableCellSpacing(element);
-            var contentBorders = GetBlockContentBorders(element, W.tblBorders, false);
-            var tableShading = GetTableShading(element);
-            var tableCellMargins = GetTableCellMargins(element);
-            var tableLook = GetTableLook(element);
-
-            var tblPr = new XElement(W.tblPr, bidiVisual, tableWidth, cellSpacing, contentBorders, tableShading, tableCellMargins, tableLook);
+            XElement tblPr = new XElement(W.tblPr,
+                bidiVisual,
+                GetTableWidth(element),
+                GetTableCellSpacing(element),
+                GetBlockContentBorders(element, W.tblBorders, false),
+                GetTableShading(element),
+                GetTableCellMargins(element),
+                GetTableLook(element));
             return tblPr;
         }
 

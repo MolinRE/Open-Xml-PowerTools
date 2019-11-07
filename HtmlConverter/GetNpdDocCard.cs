@@ -972,7 +972,7 @@ namespace HtmlConverter
             for (int i = 0; i < wordParagraphs.Count; i++)
             {
                 // Если встречаем гриф, то берём все предыдущие параграфы,
-                if (wordParagraphs[i].HasClass("grif") && (i > 0 && !wordParagraphs[i-1].HasClass("grif")))
+                if (wordParagraphs[i].HasClass("grif") && !wordParagraphs[i-1].HasClass("grif"))
                 {
                     grifIndex = i + 1;
                     // Берём все элементы сверху списка, которые по правому краю
@@ -1327,7 +1327,7 @@ namespace HtmlConverter
                 return true;
             }
 
-            if (split[0] == "Форма" && !(center || bold) && elem.Value.Length < 470)
+            if (split[0] == "Форма" && !(center || bold))
             {
                 return true;
             }

@@ -1,1 +1,0 @@
-nuget push OpenXmlPowerTools461.2.2.0.nupkg -Source http://nexus.action-media.ru/repository/nuget-action-team-webarm/ -ApiKey ContentTools -Verbosity detailed

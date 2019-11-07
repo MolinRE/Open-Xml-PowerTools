@@ -95,6 +95,9 @@ namespace OpenXmlPowerTools
                     using (MemoryStream ms = new MemoryStream())
                     {
                         ms.Write(wmlDoc.DocumentByteArray, 0, wmlDoc.DocumentByteArray.Length);
+#if !NET35
+                        UriFixer.FixInvalidUri(ms, brokenUri => FixUri(brokenUri));
+#endif
                         wmlDoc = new WmlDocument("dummy.docx", ms.ToArray());
                     }
                     using (MemoryStream ms = new MemoryStream())

@@ -18,16 +18,7 @@ namespace DocxConverter
             XDocument xDoc = new XDocument();
             using (XmlWriter xmlWriter = xDoc.CreateWriter())
             {
-                try
-                {
-                    node.WriteTo(xmlWriter);
-                }
-                catch (Exception e)
-                {
-                    Console.WriteLine(e.Message);
-                    Console.ReadLine();
-                    throw;
-                }
+                node.WriteTo(xmlWriter);
             }
             return xDoc.Root;
         }
