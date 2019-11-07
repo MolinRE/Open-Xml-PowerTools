@@ -30,9 +30,10 @@ namespace DocxConverter
     {
         static void Main(string[] args)
         {
+            // Не пихать обычный HTML. Код настроен на формат веб-арма
             string directory = @"C:\Users\k.komarov\source\example\docx\";
 
-            foreach (var file in Directory.GetFiles(directory, "118.html"))
+            foreach (var file in Directory.GetFiles(directory, "118_69634.xml"))
             {
                 ConvertToDocx(file, directory);
             }
@@ -44,7 +45,7 @@ namespace DocxConverter
             var sourceHtmlFi = new FileInfo(file);
             Console.WriteLine("Converting " + sourceHtmlFi.Name);
             
-            var destDocxFi = new FileInfo(Path.Combine(destinationDir, sourceHtmlFi.Name.Replace(".html", "-3-ConvertedByHtmlToWml.docx")));
+            var destDocxFi = new FileInfo(Path.ChangeExtension(file, "docx"));
             
             var page = new CkePage();
             page.HtmlContent = File.ReadAllText(file);
@@ -130,6 +131,26 @@ namespace DocxConverter
                 heading.Name = "h" + level;
             }
 
+            foreach (var table in html.Descendants("table"))
+            {
+                var width = table.Attribute("width");
+                if (width != null)
+                {
+                    table.SetStyle("width", width.Value);
+                    width.Remove();
+                }
+
+                var height = table.Attribute("height");
+                if (height != null)
+                {
+                    if (!height.Value.EndsWith("%"))
+                    {
+                        table.SetStyle("height", height.Value);
+                    }
+                    height.Remove();
+                }
+            }
+
 
             #endregion
 
@@ -140,7 +161,7 @@ namespace DocxConverter
 
             if (!fill)
             {
-                ResetFill(html);
+                //ResetFill(html);
             }
 
             HtmlToWmlConverterSettings settings = HtmlToWmlConverter.GetDefaultSettings();
@@ -427,6 +448,42 @@ BDO[DIR=""rtl""] { direction: rtl; unicode-bidi: bidi-override }
 
 ";
 
-        static string userCss = @"";
+        static string userCss = @"
+table {
+  border-collapse: collapse;
+  border-style: hidden;
+}
+td .cell_border_all,
+th .cell_border_all {
+    border-style: solid ;
+    border-width: 1px;
+    border-color: rgb(0, 0, 0)}
+td .cell_border_bottom,
+td .cell_border_bottom {
+    border-bottom-style: solid ;
+    border-bottom-width: 1px;
+    border-bottom-color: rgb(0, 0, 0) ;
+}
+td .cell_border_right,
+th .cell_border_right{
+    border-right-style: solid ;
+    border-right-width: 1px;
+    border-right-color: rgb(0, 0, 0) ;
+}
+td .cell_border_left,
+th .cell_border_left {
+    border-left-style: solid ;
+    border-left-width: 1px;
+    border-left-color: rgb(0, 0, 0) ;
+}
+td .cell_border_top,
+th .cell_border_top{
+    border-top-style: solid ;
+    border-top-width: 1px ;
+    border-top-color: rgb(0, 0, 0) ;
+}
+td {
+    padding: 5px;
+}";
     }
 }

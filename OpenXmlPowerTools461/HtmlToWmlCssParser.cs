@@ -519,12 +519,8 @@ namespace OpenXmlPowerTools.HtmlToWml.CSS
 
         public List<CssTerm> Terms
         {
-            get {
-                return m_terms;
-            }
-            set {
-                m_terms = value;
-            }
+            get => m_terms;
+            set => m_terms = value;
         }
 
         public bool IsNotAuto
