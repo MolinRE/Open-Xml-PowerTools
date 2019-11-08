@@ -8,7 +8,7 @@
     <owners>$author$</owners>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>$description$</description>
-    <releaseNotes>Updated references.</releaseNotes>
+    <releaseNotes>Fixed bug in HtmlToWml converter.</releaseNotes>
     <copyright>Copyright 2019</copyright>
   </metadata>
 </package>

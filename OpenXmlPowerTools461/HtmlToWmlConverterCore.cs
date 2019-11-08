@@ -231,46 +231,71 @@ namespace OpenXmlPowerTools.HtmlToWml
             return node;
         }
 
+        /// <summary>
+        /// Adds pseudo cells to table so instead of merged cells it will contains empty cells and has accurate grid.
+        /// </summary>
+        /// <param name="html">XML document.</param>
+        /// <returns></returns>
         private static XElement AddPseudoCells(XElement html)
         {
+            var table = html.Descendants().FirstOrDefault(p => p.Name.LocalName == "table");
             while (true)
             {
+                var debug = html
+                    .Descendants()
+                    .Where(p => p.Name == XhtmlNoNamespace.td || p.Name == XhtmlNoNamespace.th)
+                    .Where(td => td.Attribute(XhtmlNoNamespace.rowspan) != null && td.Attribute("HtmlToWmlVMergeRestart") == null)
+                    .ToList();
+
                 var rowSpanCell = html
-                    .Descendants(XhtmlNoNamespace.td)
+                    .Descendants()
+                    .Where(p => p.Name == XhtmlNoNamespace.td || p.Name == XhtmlNoNamespace.th)
                     .FirstOrDefault(td => td.Attribute(XhtmlNoNamespace.rowspan) != null && td.Attribute("HtmlToWmlVMergeRestart") == null);
                 if (rowSpanCell == null)
                     break;
-                rowSpanCell.Add(
-                    new XAttribute("HtmlToWmlVMergeRestart", "true"));
-                int colNumber = rowSpanCell.ElementsBeforeSelf(XhtmlNoNamespace.td).Count();
+                rowSpanCell.Add(new XAttribute("HtmlToWmlVMergeRestart", "true"));
+                int colNumber = rowSpanCell.ElementsBeforeSelf()
+                    .Select(s => s.Attribute("colspan") == null ? 1 : (int)s.Attribute("colspan"))
+                    .Sum();
+                // rowspan
                 int numberPseudoToAdd = (int)rowSpanCell.Attribute(XhtmlNoNamespace.rowspan) - 1;
+                // cell's row
                 var tr = rowSpanCell.Ancestors(XhtmlNoNamespace.tr).FirstOrDefault();
                 if (tr == null)
+                {
                     throw new OpenXmlPowerToolsException("Invalid HTML - td does not have parent tr");
+                }
+                // rows to which we must add pseudo cells
                 var rowsToAddTo = tr
                     .ElementsAfterSelf(XhtmlNoNamespace.tr)
                     .Take(numberPseudoToAdd)
                     .ToList();
                 foreach (var rowToAddTo in rowsToAddTo)
                 {
-                    var td = new XElement(XhtmlNoNamespace.td, 
+                    // use rowSpanCell to determine cell type (th or td)
+                    var td = new XElement(XhtmlNoNamespace.td,
                         rowSpanCell.Attributes(), 
                         new XAttribute("HtmlToWmlVMergeNoRestart", "true"));
 
-                    if (colNumber > 0)
+                    if (colNumber == 0)
+                    {
+                        // add first
+                        rowToAddTo.AddFirst(td);
+                    }
+                    else // colNumber > 0
                     {
                         var tdToAddAfter = rowToAddTo
-                            .Elements(XhtmlNoNamespace.td)
+                            .Elements() //XhtmlNoNamespace.td)
                             .Skip(colNumber - 1)
                             .FirstOrDefault();
 
                         // in case if there are not enough cells for some reason
                         if (tdToAddAfter == null)
                         {
-                            if (rowToAddTo.Elements(XhtmlNoNamespace.td).Any())
+                            if (rowToAddTo.Elements().Any())
                             {
                                 // either add last
-                                rowToAddTo.Elements(XhtmlNoNamespace.td).Last().AddAfterSelf(td);
+                                rowToAddTo.Elements().Last().AddAfterSelf(td);
                             }
                             else
                             {
@@ -281,24 +306,6 @@ namespace OpenXmlPowerTools.HtmlToWml
                         else
                         {
                             tdToAddAfter.AddAfterSelf(td);
-                        }
-                    }
-                    else
-                    {
-                        var tdToAddBefore = rowToAddTo
-                            .Elements(XhtmlNoNamespace.td)
-                            .Skip(colNumber)
-                            .FirstOrDefault();
-
-                        // in case if there are not enough cells for some reason
-                        if (tdToAddBefore == null)
-                        {
-                            // add first
-                            rowToAddTo.Add(td);
-                        }
-                        else
-                        {
-                            tdToAddBefore.AddBeforeSelf(td);
                         }
                     }
                 }

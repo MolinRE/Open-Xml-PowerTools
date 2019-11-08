@@ -33,7 +33,7 @@ namespace DocxConverter
             // Не пихать обычный HTML. Код настроен на формат веб-арма
             string directory = @"C:\Users\k.komarov\source\example\docx\";
 
-            foreach (var file in Directory.GetFiles(directory, "118_69738" + ".xml"))
+            foreach (var file in Directory.GetFiles(directory, "" + "table" + ".xml"))
             {
                 ConvertToDocx(file, directory);
             }
