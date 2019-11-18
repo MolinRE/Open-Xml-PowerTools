@@ -1149,10 +1149,11 @@ namespace OpenXmlPowerTools.HtmlToWml
 
                 if (element.Name == XhtmlNoNamespace.table)
                 {
-                    XElement wmlTable = new XElement(W.tbl,
-                        GetTableProperties(element),
-                        GetTableGrid(element, settings),
-                        element.Nodes().Select(n => Transform(n, settings, wDoc, NextExpected.Paragraph, preserveWhiteSpace)));
+                    var tableProperties = GetTableProperties(element);
+                    var tableGrid = GetTableGrid(element, settings);
+
+                    var wmlTable = new XElement(W.tbl, tableProperties, tableGrid, element.Nodes()
+                        .Select(n => Transform(n, settings, wDoc, NextExpected.Paragraph, preserveWhiteSpace)));
                     return wmlTable;
                 }
 
@@ -1188,8 +1189,8 @@ namespace OpenXmlPowerTools.HtmlToWml
                             new XElement(W.r,
                                 GetRunProperties(element, settings),
                                 new XElement(W.t, "")));
-                        return new XElement(W.tc,
-                            GetCellProperties(element), p);
+
+                        return new XElement(W.tc, GetCellProperties(element), p);
                     }
                 }
 
@@ -3534,6 +3535,7 @@ namespace OpenXmlPowerTools.HtmlToWml
                 columnWidths[c] = columnWidth;
             }
 
+            // TODO: fix width calculation
             XElement tblGrid = new XElement(W.tblGrid,
                 columnWidths.Select(cw => new XElement(W.gridCol,
                     new XAttribute(W._w, (long)GetTwipWidth(cw, (int)printable)))));
@@ -3662,13 +3664,16 @@ namespace OpenXmlPowerTools.HtmlToWml
                 hideMark);
         }
 
+        // for some reason, gridSpan and vMerge calculations were omitted in this method
+        // I returned them, but I don't know why it was omitted
         private static XElement GetCellHeaderProperties(XElement element)
         {
-            //int? colspan = (int?)element.Attribute(Xhtml.colspan);
-            //XElement gridSpan = null;
-            //if (colspan != null)
-            //    gridSpan = new XElement(W.gridSpan,
-            //        new XAttribute(W.val, colspan));
+            int? colspan = (int?)element.Attribute(XhtmlNoNamespace.colspan);
+            XElement gridSpan = null;
+            if (colspan != null)
+            {
+                gridSpan = new XElement(W.gridSpan, new XAttribute(W.val, colspan));
+            }
 
             XElement tblW = GetCellWidth(element);
 
@@ -3683,8 +3688,20 @@ namespace OpenXmlPowerTools.HtmlToWml
 
             XElement vAlign = new XElement(W.vAlign, new XAttribute(W.val, "center"));
 
+            XElement vMerge = null;
+            if (element.Attribute("HtmlToWmlVMergeNoRestart") != null)
+            {
+                vMerge = new XElement(W.vMerge);
+            }
+            else if (element.Attribute("HtmlToWmlVMergeRestart") != null)
+            {
+                vMerge = new XElement(W.vMerge, new XAttribute(W.val, "restart"));
+            }
+
             return new XElement(W.tcPr,
                 tblW,
+                gridSpan,
+                vMerge,
                 tcBorders,
                 shd,
                 tcMar,

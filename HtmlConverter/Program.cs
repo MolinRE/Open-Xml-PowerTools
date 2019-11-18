@@ -22,7 +22,7 @@ namespace HtmlConverter
             // Настраиваем кэш лобби, чтобы не лезть в базу
             WordImportDal.Lobbies = WordImportDal.GetAllLobbies();
 
-            foreach (var file in Directory.GetFiles(picDirPath, "Вид кредита" + ".docx"))
+            foreach (var file in Directory.GetFiles(picDirPath, "Факт" + ".docx"))
             {
                 ConvertToHtml(file, picDirPath);
             }
@@ -104,7 +104,7 @@ namespace HtmlConverter
 
                     ConsoleHelpers.PostProcessAndSave(destFileName, htmlElement);
                     Console.WriteLine();
-                    //ConsoleHelpers.ConvertOriginalAndSave(wDoc, destFileName, settings);
+                    ConsoleHelpers.ConvertOriginalAndSave(wDoc, destFileName, settings);
 
                     if (charToSkip != 's')
                     {

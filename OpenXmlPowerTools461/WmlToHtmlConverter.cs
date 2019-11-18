@@ -1362,7 +1362,7 @@ namespace OpenXmlPowerTools
         {
             var style = new Dictionary<string, string>();
 
-            var styleName = (string) paragraph.Attribute(PtOpenXml.StyleName);
+            var styleName = (string)paragraph.Attribute(PtOpenXml.StyleName);
             if (styleName != null)
                 style.Add("PtStyleName", styleName);
 
